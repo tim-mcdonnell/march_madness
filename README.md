@@ -121,10 +121,10 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 3. Install dependencies:
 ```bash
-uv pip install -r requirements.txt
+uv pip install -e .
 ```
 
-4. 4. Set up data ingestion pipeline (see detailed instructions in the data README)
+4. Set up data ingestion pipeline (see detailed instructions in the data README)
 
 ## 🔍 Code Standards
 
