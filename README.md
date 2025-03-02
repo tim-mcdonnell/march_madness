@@ -285,14 +285,6 @@ We use a multi-level testing approach:
    - Methodology document explaining the overall approach
    - Model cards for trained models describing their performance
 
-## 👥 Contributing
-
-[PLACEHOLDER: Add contribution guidelines]
-
-## 📜 License
-
-[PLACEHOLDER: Add license information]
-
 ## 🔗 Resources
 
 - [sportsdataverse/hoopR-mbb-data](https://github.com/sportsdataverse/hoopR-mbb-data/) - Our primary data source
