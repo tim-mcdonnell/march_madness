@@ -281,7 +281,7 @@ def test_integration_with_cli(
     # Run the pipeline with the CLI function
     result = _run_pipeline_stage("data", test_config, args)
     
-    # Check that run_data_stage was called
+    # Check that run_data_stage was called with the config
     mock_run_data_stage.assert_called_once_with(test_config)
     
     # Check that the CLI returned success

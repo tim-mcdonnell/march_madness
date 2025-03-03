@@ -6,6 +6,7 @@ validation functions to ensure data quality and consistency.
 """
 
 import logging
+import re
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -77,10 +78,10 @@ PLAY_BY_PLAY_SCHEMA = {
         'time': pl.Utf8,
         'type_id': pl.Int32,
         'type_text': pl.Utf8,
-        # Present in >90% of files
-        'athlete_id_2': pl.Int32,  # Present in 95.2% of files
     },
     SchemaType.OPTIONAL: {
+        # Commonly present but not in all files
+        'athlete_id_2': pl.Int32,  # Present in 95.2% of files
         # Present in 75-90% of files
         'end_half_seconds_remaining': pl.Int32,  # Present in 85.7% of files
         'end_quarter_seconds_remaining': pl.Int32,  # Present in 85.7% of files
@@ -247,7 +248,6 @@ SCHEDULES_SCHEMA = {
         'venue_full_name': pl.String,
         'venue_id': pl.Int32,
         'venue_indoor': pl.Boolean,
-        'venue_capacity': pl.Float64,  # Present in 91.3% of files
     },
     SchemaType.OPTIONAL: {
         'away_current_rank': pl.Float64,
@@ -261,6 +261,7 @@ SCHEDULES_SCHEMA = {
         'home_linescores': pl.String,
         'home_records': pl.String,
         'play_by_play_available': pl.Boolean,
+        'venue_capacity': pl.Int32,  # Present in 91.3% of files
     }
 }
 
@@ -534,7 +535,20 @@ def validate_directory(
             continue
         
         for file_path in category_dir.glob('*.parquet'):
-            valid, errors = validate_file(file_path, category, strict_optional=strict_optional)
+            # Extract year from filename if years filter is provided
+            year_match = re.search(r'_(\d{4})\.parquet$', file_path.name)
+            year = int(year_match.group(1)) if year_match else None
+            
+            # Skip if years filter is provided and this file doesn't match
+            if years and year and year not in years:
+                continue
+                
+            # Use year-aware validation
+            valid, errors = validate_with_year_awareness(
+                file_path, 
+                category, 
+                strict_optional=strict_optional
+            )
             
             results[str(file_path)] = {
                 'valid': valid,
@@ -583,6 +597,117 @@ def get_schema_summary() -> dict[str, dict[str, Any]]:
         }
     
     return summary
+
+
+def validate_with_year_awareness(
+    file_path: str | Path,
+    category: str = None,
+    strict_optional: bool = False
+) -> tuple[bool, list[str]]:
+    """
+    Validate a file with year-aware schema adjustments.
+    
+    This function extracts the year from the filename and applies different
+    validation rules based on recency:
+    - For recent years (2023+), certain historically required columns that are 
+      now missing from the data source are treated as optional
+    - For older years, the standard schema validation is applied
+    
+    Args:
+        file_path: Path to the file to validate
+        category: Data category (play_by_play, schedules, etc.)
+        strict_optional: Whether to strictly validate optional columns
+        
+    Returns:
+        Tuple of (is_valid, list_of_errors)
+    """
+    file_path = Path(file_path)
+    
+    # Extract year from filename
+    # Pattern matching for different filename formats
+    year = None
+    filename = file_path.name
+    
+    # Try to extract year from filename
+    if 'schedule' in filename and filename.endswith('.parquet'):
+        # Format: mbb_schedule_2024.parquet
+        year_match = re.search(r'_(\d{4})\.parquet$', filename)
+        if year_match:
+            year = int(year_match.group(1))
+    elif filename.endswith('.parquet'):
+        # Format: play_by_play_2024.parquet, team_box_2024.parquet, etc.
+        year_match = re.search(r'_(\d{4})\.parquet$', filename)
+        if year_match:
+            year = int(year_match.group(1))
+    
+    # If we couldn't extract a year or category is not provided, fall back to standard validation
+    if year is None or category is None:
+        return validate_file(file_path, category, strict_optional)
+    
+    # For recent years, adjust schema expectations
+    if year >= 2023:
+        # Read the file
+        try:
+            df = pl.read_parquet(file_path)
+            
+            # Get schema for the category
+            if category not in SCHEMA_MAP:
+                return False, [f"Unknown category: {category}"]
+            
+            schema = SCHEMA_MAP[category]
+            core_schema = schema[SchemaType.CORE]
+            optional_schema = schema[SchemaType.OPTIONAL]
+            
+            errors = []
+            
+            # Year-specific adjustments
+            year_specific_optional = []
+            if category == 'schedules' and year >= 2023:
+                # venue_capacity is now optional for recent schedules
+                year_specific_optional.append('venue_capacity')
+            elif category == 'play_by_play' and year >= 2023:
+                # athlete_id_2 is now optional for recent play-by-play data
+                year_specific_optional.append('athlete_id_2')
+            
+            # Validate core columns with year-specific exceptions
+            df_columns = set(df.columns)
+            for col_name, expected_type in core_schema.items():
+                if col_name in year_specific_optional:
+                    # Skip validation for columns that are now optional for recent years
+                    continue
+                
+                if col_name not in df_columns:
+                    errors.append(f"Missing required column: {col_name}")
+                    continue
+                
+                actual_type = df.schema[col_name]
+                if not is_compatible_type(actual_type, expected_type):
+                    errors.append(
+                        f"Type mismatch for column {col_name}: "
+                        f"expected {expected_type}, got {actual_type}"
+                    )
+            
+            # Validate optional columns if strict_optional is True
+            if strict_optional:
+                for col_name, expected_type in optional_schema.items():
+                    if col_name in df_columns:
+                        actual_type = df.schema[col_name]
+                        if not is_compatible_type(actual_type, expected_type):
+                            errors.append(
+                                f"Type mismatch for optional column {col_name}: "
+                                f"expected {expected_type}, got {actual_type}"
+                            )
+            
+            is_valid = len(errors) == 0
+            return is_valid, errors
+            
+        except pl.exceptions.ComputeError as e:
+            return False, [f"Error computing data in {file_path}: {e}"]
+        except Exception as e:
+            return False, [f"Unexpected error validating {file_path}: {e}"]
+    else:
+        # For older years, use standard validation
+        return validate_file(file_path, category, strict_optional)
 
 
 if __name__ == "__main__":
