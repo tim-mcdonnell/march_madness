@@ -1,0 +1,70 @@
+site_name: NCAA March Madness Predictor
+site_description: Documentation for the NCAA March Madness prediction project
+site_author: Tim McDonnell
+repo_url: https://github.com/tim-mcdonnell/march_madness
+repo_name: tim-mcdonnell/march_madness
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: orange
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            show_submodules: true
+  - mkdocs-jupyter:
+      include_source: True
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Pipeline:
+    - Overview: pipeline/overview.md
+    - Configuration: pipeline/configuration.md
+    - Data Stage: pipeline/data-stage.md
+    - EDA Stage: pipeline/eda-stage.md
+    - Feature Engineering: pipeline/feature-engineering.md
+    - Model Development: pipeline/model-development.md
+    - Evaluation: pipeline/evaluation.md
+  - API Reference:
+    - Data: api/data.md
+    - Pipeline: api/pipeline.md
+    - Features: api/features.md
+    - Models: api/models.md
+    - Visualization: api/visualization.md
+  - Examples:
+    - Data Download: examples/data-download.md
+    - Pipeline Usage: examples/pipeline-usage.md
+  - Methodology: methodology.md
+  - Contributing: contributing.md 

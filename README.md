@@ -2,6 +2,9 @@
 
 A data science approach to building optimal March Madness brackets using historical NCAA men's basketball data.
 
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/yourusername/yourgistid/raw/coverage.json)](https://github.com/tim-mcdonnell/march_madness/actions/workflows/badges.yml)
+[![Pipeline Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/yourusername/yourgistid/raw/pipeline-status.json)](https://github.com/tim-mcdonnell/march_madness/actions/workflows/run_pipeline.yml)
+
 ## 📋 Project Overview
 
 This project aims to develop a machine learning model that predicts NCAA March Madness tournament outcomes using 22 years of historical data. By analyzing team statistics, tournament performance, and other relevant factors, we'll create a data-driven approach to bracket construction that outperforms traditional methods.
@@ -46,22 +49,26 @@ ncaa-march-madness-predictor/
 ├── README.md               # Project overview and documentation
 ├── requirements.txt        # Python dependencies
 ├── .gitignore              # Files to exclude from git
+├── run_pipeline.py         # Main pipeline execution script
+├── config/                 # Configuration files
+│   └── pipeline_config.yaml # Pipeline configuration
 ├── data/                   # Data directory
 │   ├── raw/                # Original unmodified data
 │   ├── processed/          # Cleaned and transformed data
 │   └── README.md           # Data documentation
 ├── notebooks/              # Jupyter notebooks
-│   ├── 01_data_cleaning.ipynb
-│   ├── 02_exploratory_analysis.ipynb
-│   ├── 03_feature_engineering.ipynb
-│   ├── 04_model_development.ipynb
-│   └── 05_evaluation.ipynb
 ├── src/                    # Source code
 │   ├── __init__.py
 │   ├── data/               # Data processing modules
 │   │   ├── __init__.py
 │   │   ├── loader.py       # Data loading functions
 │   │   └── cleaner.py      # Data cleaning functions
+│   ├── pipeline/           # Pipeline framework
+│   │   ├── __init__.py     # Pipeline package definition
+│   │   ├── cli.py          # Command-line interface
+│   │   ├── config.py       # Configuration management
+│   │   ├── data_management.py # Data cleaning/purging utilities
+│   │   └── data_stage.py   # Data stage implementation
 │   ├── features/           # Feature engineering
 │   │   ├── __init__.py
 │   │   └── builders.py     # Feature creation functions
@@ -80,6 +87,12 @@ ncaa-march-madness-predictor/
 │   ├── __init__.py
 │   ├── test_data.py
 │   └── test_models.py
+├── .github/                # GitHub configurations
+│   └── workflows/          # GitHub Actions workflow files
+│       ├── test.yml        # Testing workflow
+│       ├── run_pipeline.yml # Pipeline execution workflow 
+│       ├── badges.yml      # Status badges workflow
+│       └── docs.yml        # Documentation workflow
 └── docs/                   # Additional documentation
     └── methodology.md      # Detailed methodology documentation
 ```
@@ -124,7 +137,118 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-4. Set up data ingestion pipeline (see detailed instructions in the data README)
+4. Run the pipeline:
+```bash
+# Create a default configuration file
+python run_pipeline.py --create-config
+
+# Run the full pipeline
+python run_pipeline.py
+
+# Run only the data collection stage
+python run_pipeline.py --stages data
+```
+
+## 🚚 Pipeline Framework
+
+This project includes a modular pipeline framework that manages the end-to-end workflow, from data ingestion to model evaluation.
+
+### Pipeline Components
+
+- **Configuration Management**: YAML-based configuration with validation
+- **Data Management**: Utilities for organizing, cleaning, and purging data
+- **Modular Stages**: Separate pipeline stages that can run independently
+- **Logging**: Comprehensive logging for debugging and tracking progress
+
+### Pipeline CLI Options
+
+The pipeline can be run with various options:
+
+```bash
+# Run the full pipeline
+python run_pipeline.py
+
+# Run only specific stages
+python run_pipeline.py --stages data features
+
+# Process specific years
+python run_pipeline.py --years 2023 2024 2025
+
+# Process specific data categories
+python run_pipeline.py --categories team_box player_box
+
+# Clean data before running
+python run_pipeline.py --clean-raw      # Clean raw data
+python run_pipeline.py --clean-all      # Clean all data
+
+# Use a custom configuration
+python run_pipeline.py --config custom_config.yaml
+```
+
+### Configuration
+
+The pipeline is configured using a YAML file (`config/pipeline_config.yaml`):
+
+```yaml
+# Data paths and selections
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  feature_dir: "data/features"
+  model_dir: "models"
+  results_dir: "results"
+  years: [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+  categories: ["play_by_play", "player_box", "schedules", "team_box"]
+
+# Feature settings
+features:
+  # Configuration for feature engineering
+
+# Model settings
+model:
+  # Configuration for model training and evaluation
+```
+
+## 🔄 CI/CD Workflow
+
+This project uses GitHub Actions for continuous integration and deployment, ensuring code quality and automating routine tasks.
+
+### Automated Workflows
+
+- **Testing**: Automatically runs tests on all pull requests and pushes to main branches
+- **Pipeline Execution**: Daily scheduled runs to update data during the basketball season
+- **Documentation**: Automatically builds and publishes documentation to GitHub Pages
+- **Status Badges**: Generates coverage and status badges for the repository
+
+### GitHub Actions Configuration
+
+Our CI/CD workflows are defined in the `.github/workflows` directory:
+
+```
+.github/workflows/
+├── test.yml           # Runs tests on PRs and pushes
+├── run_pipeline.yml   # Scheduled pipeline execution
+├── badges.yml         # Generates status badges
+└── docs.yml           # Builds and deploys documentation
+```
+
+### Manual Workflow Triggers
+
+Most workflows can also be triggered manually through the GitHub Actions interface:
+
+1. Navigate to the Actions tab in the GitHub repository
+2. Select the workflow you want to run
+3. Click "Run workflow"
+4. Configure any input parameters
+5. Start the workflow
+
+### Pipeline Status Dashboard
+
+During basketball season, a status dashboard is automatically updated daily showing:
+- Last successful data ingestion
+- Current data coverage
+- Model performance metrics
+- Prediction confidence scores
 
 ## 🔍 Code Standards
 
