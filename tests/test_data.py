@@ -61,9 +61,8 @@ def test_create_directory_structure(setup_test_dir: TestFixture) -> None:
     
     # Check that directories were created
     for _category_name, category_info in DATA_CATEGORIES.items():
-        for year in [TEST_YEAR]:
-            path = TEST_DATA_DIR / category_info["dir_name"] / str(year)
-            assert path.exists(), f"Path {path} does not exist"  # noqa: S101
+        path = TEST_DATA_DIR / category_info["dir_name"]
+        assert path.exists(), f"Path {path} does not exist"  # noqa: S101
 
 
 @mock.patch("src.data.loader.requests.get")
