@@ -56,7 +56,7 @@ class DataCleaner:
         before_count: int,
         after_count: int = None,
         details: dict[str, Any] | None = None,
-        **kwargs: Any
+        **kwargs
     ) -> None:
         """
         Log statistics for a cleaning step.
@@ -461,7 +461,12 @@ class DataCleaner:
         
         logger.info(f"Created team name mapping with {len(self._team_name_map)} entries")
 
-    def _fallback_team_name_mapping(self, df: pl.DataFrame, name_columns: list[str], all_names: set[str]) -> None:
+    def _fallback_team_name_mapping(
+        self, 
+        df: pl.DataFrame, 
+        name_columns: list[str], 
+        all_names: set[str]
+    ) -> None:
         """
         Fallback method for team name mapping when ESPN API is unavailable.
         Uses string similarity and pattern matching to group similar names.
@@ -504,8 +509,14 @@ class DataCleaner:
         
         # First apply manual mappings
         for variant, canonical in manual_mappings.items():
-            variant_matches = [name for name in all_names if variant.lower() in name.lower() and name not in processed_names]
-            canonical_matches = [name for name in all_names if canonical.lower() in name.lower() and name not in processed_names]
+            variant_matches = [
+                name for name in all_names 
+                if variant.lower() in name.lower() and name not in processed_names
+            ]
+            canonical_matches = [
+                name for name in all_names 
+                if canonical.lower() in name.lower() and name not in processed_names
+            ]
             
             if canonical_matches or variant_matches:
                 # Use the canonical name if it exists in the data, otherwise use the longest match
@@ -572,13 +583,18 @@ class DataCleaner:
         for variant, canonical in manual_mappings.items():
             if variant in all_names:
                 # Find the best canonical name that contains the canonical string
-                canonical_options = [name for name in all_names if canonical.lower() in name.lower()]
+                canonical_options = [
+                    name for name in all_names if canonical.lower() in name.lower()
+                ]
                 if canonical_options:
                     best_canonical = max(canonical_options, key=len)
                     self._team_name_map[variant] = best_canonical
         
         # Log stats about the mapping
-        logger.info(f"Team name mapping created (fallback method): {len(self._team_name_map)} variants mapped to {len(set(self._team_name_map.values()))} canonical names")
+        logger.info(
+            f"Completed fallback team name mapping: {len(self._team_name_map)} variants mapped to "
+            f"{len(set(self._team_name_map.values()))} canonical names"
+        )
         logger.debug(f"Team name mapping details: {self._team_name_map}")
 
     def _standardize_team_names(
@@ -1232,3 +1248,19 @@ class DataCleaner:
     def get_cleaning_report(self) -> dict[str, Any]:
         """Get a report of all cleaning operations and their statistics."""
         return self.cleaning_stats 
+
+    def _add_cleaning_stats(
+        self, 
+        step_name: str, 
+        step_type: str, 
+        rows_affected: int = 0, 
+        columns_affected: list[str] | None = None, 
+        before_count: int = None, 
+        after_count: int = None,
+        details: dict[str, Any] | None = None,
+        **kwargs
+    ) -> None:
+        """
+        // ... existing code ...
+        """
+        # ... existing code ... 

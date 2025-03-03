@@ -1,9 +1,10 @@
 """Tests for the data cleaning module."""
 
 
+from pathlib import Path
+
 import polars as pl
 import pytest
-from pathlib import Path
 
 from src.data.cleaner import DataCleaner, EntityResolutionError
 
@@ -81,7 +82,10 @@ def test_init(data_cleaner: DataCleaner, tmp_path: Path) -> None:
     assert data_cleaner._player_id_map == {}
 
 
-def test_handle_missing_values(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
+def test_handle_missing_values(
+    data_cleaner: DataCleaner, 
+    sample_player_box_data: pl.DataFrame
+) -> None:
     """Test handling of missing values with different strategies."""
     # Test drop strategy
     strategy = {'points': 'drop'}
@@ -111,10 +115,13 @@ def test_handle_missing_values(data_cleaner: DataCleaner, sample_player_box_data
     assert 999 in cleaned_df['points'].to_list()
 
 
-def test_detect_outliers_zscore(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
+def test_detect_outliers_zscore(
+    data_cleaner: DataCleaner, 
+    sample_player_box_data: pl.DataFrame
+) -> None:
     """Test outlier detection using z-score method."""
     columns = ['field_goals_attempted', 'field_goals_made']
-    cleaned_df = data_cleaner._detect_outliers(
+    _ = data_cleaner._detect_outliers(
         sample_player_box_data,
         columns=columns,
         method='zscore',
@@ -127,10 +134,13 @@ def test_detect_outliers_zscore(data_cleaner: DataCleaner, sample_player_box_dat
     assert stats['field_goals_made']['count'] > 0
 
 
-def test_detect_outliers_iqr(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
+def test_detect_outliers_iqr(
+    data_cleaner: DataCleaner, 
+    sample_player_box_data: pl.DataFrame
+) -> None:
     """Test outlier detection using IQR method."""
     columns = ['field_goals_attempted', 'field_goals_made']
-    cleaned_df = data_cleaner._detect_outliers(
+    _ = data_cleaner._detect_outliers(
         sample_player_box_data,
         columns=columns,
         method='iqr',
@@ -147,8 +157,10 @@ def test_string_similarity(data_cleaner: DataCleaner) -> None:
     """Test enhanced string similarity calculation with NCAA-specific patterns."""
     # Test basic similarity
     assert data_cleaner._string_similarity("Duke", "Duke Blue Devils") > 0.7
-    assert data_cleaner._string_similarity("UNC", "North Carolina") > 0.5  # Should be higher with NCAA-specific logic
-    assert data_cleaner._string_similarity("UK", "Kentucky") > 0.5  # Should be higher with NCAA-specific logic
+    # Should be higher with NCAA-specific logic
+    assert data_cleaner._string_similarity("UNC", "North Carolina") > 0.5
+    # Should be higher with NCAA-specific logic
+    assert data_cleaner._string_similarity("UK", "Kentucky") > 0.5
     assert data_cleaner._string_similarity("Duke", "Duke") == 1.0
     
     # Test NCAA-specific patterns
@@ -158,7 +170,10 @@ def test_string_similarity(data_cleaner: DataCleaner) -> None:
     assert data_cleaner._string_similarity("UCLA", "California Los Angeles") > 0.8
 
 
-def test_team_name_standardization(data_cleaner: DataCleaner, sample_team_data: pl.DataFrame) -> None:
+def test_team_name_standardization(
+    data_cleaner: DataCleaner, 
+    sample_team_data: pl.DataFrame
+) -> None:
     """Test team name standardization with NCAA-specific patterns."""
     # Create a mock mapping for testing
     name_columns = ['team_name']
@@ -216,7 +231,10 @@ def test_team_name_standardization(data_cleaner: DataCleaner, sample_team_data: 
     assert 'columns_updated' in data_cleaner.cleaning_stats['team_name_standardization']['details']
 
 
-def test_team_id_standardization(data_cleaner: DataCleaner, sample_team_data: pl.DataFrame) -> None:
+def test_team_id_standardization(
+    data_cleaner: DataCleaner, 
+    sample_team_data: pl.DataFrame
+) -> None:
     """Test team ID standardization with NCAA-specific patterns."""
     # Explicitly set the team name map for consistency
     data_cleaner._team_name_map = {
@@ -250,7 +268,10 @@ def test_team_id_standardization(data_cleaner: DataCleaner, sample_team_data: pl
     assert 'team_id_standardization' in data_cleaner.cleaning_stats
 
 
-def test_player_id_resolution(data_cleaner: DataCleaner, sample_player_data: pl.DataFrame) -> None:
+def test_player_id_resolution(
+    data_cleaner: DataCleaner, 
+    sample_player_data: pl.DataFrame
+) -> None:
     """Test enhanced player ID resolution with transfers and name variations."""
     # Let the system automatically resolve player IDs
     cleaned_df = data_cleaner._resolve_player_ids(
@@ -268,7 +289,9 @@ def test_player_id_resolution(data_cleaner: DataCleaner, sample_player_data: pl.
     name_team_groups = []
     for name in cleaned_df['athlete_name'].unique():
         for team in cleaned_df.filter(pl.col('athlete_name') == name)['team_id'].unique():
-            group_df = cleaned_df.filter((pl.col('athlete_name') == name) & (pl.col('team_id') == team))
+            group_df = cleaned_df.filter(
+                (pl.col('athlete_name') == name) & (pl.col('team_id') == team)
+            )
             unique_ids = group_df['athlete_id'].unique()
             if len(unique_ids) > 1:
                 name_team_groups.append((name, team))
@@ -281,9 +304,6 @@ def test_player_id_resolution(data_cleaner: DataCleaner, sample_player_data: pl.
     )
     # All Mike/Michael Jones entries should have the same ID
     assert len(mike_rows['athlete_id'].unique()) == 1
-    
-    # Print unique athlete names for debugging
-    print(f"Unique athlete names in cleaned data: {cleaned_df['athlete_name'].unique().to_list()}")
     
     # We want to verify players with transfers across teams maintain consistent IDs
     # Instead of checking specifically for Tom Wilson, check for any player with multiple teams
@@ -307,7 +327,11 @@ def test_player_id_resolution(data_cleaner: DataCleaner, sample_player_data: pl.
     assert data_cleaner.cleaning_stats['player_id_resolution']['details']['transfers_handled'] > 0
 
 
-def test_clean_data_with_entity_resolution(data_cleaner: DataCleaner, sample_player_data: pl.DataFrame, sample_team_data: pl.DataFrame) -> None:
+def test_clean_data_with_entity_resolution(
+    data_cleaner: DataCleaner,
+    sample_player_data: pl.DataFrame, 
+    sample_team_data: pl.DataFrame
+) -> None:
     """Test the complete data cleaning process with enhanced entity resolution."""
     # We need to modify this test to not use validation on the sample data
     # Create a mock validation function to bypass validation checks

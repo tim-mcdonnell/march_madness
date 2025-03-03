@@ -112,7 +112,7 @@ def extract_team_data(api_response: dict[str, Any]) -> list[dict[str, Any]]:
                 name_variants.append(location)
                 
             # Filter out None values and duplicates
-            team['name_variants'] = list(set([v for v in name_variants if v]))
+            team['name_variants'] = list({v for v in name_variants if v})
             
             teams.append(team)
         
@@ -268,7 +268,12 @@ def get_mock_teams_for_testing() -> list[dict[str, Any]]:
             'short_name': 'USC',
             'mascot': 'Trojans',
             'location': 'Southern California',
-            'name_variants': ['USC Trojans', 'USC', 'Southern California', 'University of Southern California']
+            'name_variants': [
+                'USC Trojans',
+                'USC',
+                'Southern California',
+                'University of Southern California'
+            ]
         }
     ]
 
