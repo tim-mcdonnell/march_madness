@@ -15,6 +15,28 @@ data:
   years: [2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
   categories: ["play_by_play", "player_box", "schedules", "team_box"]
 
+# Data validation settings
+validation:
+  # Enable or disable validation
+  enabled: true
+  
+  # Validation behavior
+  strict: false               # If true, stops pipeline if validation fails
+  strict_optional: false      # If true, treats optional columns as required
+  check_consistency: true     # Enable cross-category consistency checks
+  
+  # Validation scope
+  categories:                 # List of categories to validate (null = all categories)
+    - play_by_play
+    - player_box
+    - schedules
+    - team_box
+  
+  years: null                 # List of years to validate (null = all years)
+  
+  # Validation reporting
+  report_path: "validation_reports/latest_validation_report.md"
+
 # Feature engineering settings
 features:
   team_stats:
@@ -54,3 +76,24 @@ evaluation:
   simulation:
     n_simulations: 1000
     seed_method: "bracket"  # Options: "bracket", "random", "custom" 
+
+# Pipeline execution configuration
+pipeline:
+  # Pipeline stages to run (in order)
+  stages:
+    - data
+    - feature_engineering
+    - modeling
+    - evaluation
+  
+  # Parallel processing
+  parallel_processing: true
+  max_workers: 4
+  
+  # Logging configuration
+  logging:
+    level: "INFO"
+    log_file: "logs/pipeline.log"
+    
+  # Error handling
+  abort_on_error: false     # If true, stops pipeline if any stage fails 

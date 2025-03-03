@@ -107,6 +107,69 @@ def purge_raw_data(
                 file_path.unlink()
 
 
+def _extract_category_and_year(filename: str) -> tuple[str | None, int | None]:
+    """
+    Extract category and year from a filename.
+    
+    Args:
+        filename: Filename to parse
+        
+    Returns:
+        Tuple containing:
+            - Category string or None if not found
+            - Year integer or None if not found
+    """
+    file_parts = filename.split('_')
+    
+    if len(file_parts) < 3:
+        return None, None
+    
+    # Reconstruct the category (might be multiple parts)
+    category_parts = []
+    file_year = None
+    
+    for part in file_parts:
+        # Check if this part could be a year
+        if file_year is None and part.isdigit() and len(part) == 4:
+            file_year = int(part)
+        elif file_year is None:
+            category_parts.append(part)
+    
+    file_category = '_'.join(category_parts) if category_parts else None
+    
+    return file_category, file_year
+
+
+def _should_delete_file(
+    filename: str, 
+    categories: list[str] | None, 
+    years: list[int] | None
+) -> bool:
+    """
+    Determine if a file should be deleted based on category and year filters.
+    
+    Args:
+        filename: Filename to check
+        categories: List of categories to include, or None for all
+        years: List of years to include, or None for all
+        
+    Returns:
+        True if the file should be deleted, False otherwise
+    """
+    file_category, file_year = _extract_category_and_year(filename)
+    
+    # If filename doesn't match expected pattern, default to include
+    if file_category is None:
+        return True
+    
+    # Check category filter
+    if categories is not None and file_category not in categories:
+        return False
+    
+    # Check year filter
+    return not (years is not None and (file_year is None or file_year not in years))
+
+
 def purge_processed_data(
     config: dict[str, Any],
     categories: list[str] | None = None,
@@ -135,40 +198,7 @@ def purge_processed_data(
         filename = file_path.name
         
         # Check if file matches category and year filters
-        should_delete = False
-        
-        # Extract category and year from filename 
-        # (e.g., "play_by_play_2023_cleaned.parquet")
-        file_parts = filename.split('_')
-        
-        if len(file_parts) >= 3:
-            # Reconstruct the category (might be multiple parts)
-            category_parts = []
-            year_found = False
-            
-            for part in file_parts:
-                # Check if this part could be a year
-                if not year_found and part.isdigit() and len(part) == 4:
-                    file_year = int(part)
-                    year_found = True
-                elif not year_found:
-                    category_parts.append(part)
-            
-            file_category = '_'.join(category_parts)
-            
-            # Determine if file should be deleted based on categories and years filters
-            if categories is not None and file_category not in categories:
-                should_delete = False
-            elif years is not None and (not year_found or file_year not in years):
-                should_delete = False
-            else:
-                should_delete = True
-        else:
-            # If filename doesn't match expected pattern, include it by default
-            should_delete = True
-        
-        # Delete file if it matches filters
-        if should_delete:
+        if _should_delete_file(filename, categories, years):
             logger.info(f"Deleting file: {file_path}")
             file_path.unlink()
 

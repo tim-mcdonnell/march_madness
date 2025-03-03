@@ -120,10 +120,11 @@ def example_3_data_cleaning() -> dict:
     logger.info("Re-downloading the purged data")
     results = run_data_stage(config, years=years, categories=categories)
     
-    if years[0] in results and "downloaded" in results[years[0]]:
-        if categories[0] in results[years[0]]["downloaded"]:
-            path = results[years[0]]["downloaded"][categories[0]]
-            logger.info(f"Successfully re-downloaded {categories[0]} data to {path}")
+    if (years[0] in results and 
+        "downloaded" in results[years[0]] and 
+        categories[0] in results[years[0]]["downloaded"]):
+        path = results[years[0]]["downloaded"][categories[0]]
+        logger.info(f"Successfully re-downloaded {categories[0]} data to {path}")
     
     return results
 

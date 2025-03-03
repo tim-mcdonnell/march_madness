@@ -104,6 +104,65 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _handle_data_purging(args: argparse.Namespace, config: dict[str, Any]) -> None:
+    """
+    Handle data purging based on command-line arguments.
+    
+    Args:
+        args: Command-line arguments
+        config: Pipeline configuration
+    """
+    if args.clean_all:
+        purge_data("all", config, args.categories, args.years)
+    else:
+        if args.clean_raw:
+            purge_data("raw", config, args.categories, args.years)
+        if args.clean_processed:
+            purge_data("processed", config, args.categories, args.years)
+        if args.clean_features:
+            purge_data("features", config)
+        if args.clean_models:
+            purge_data("models", config)
+
+
+def _run_pipeline_stage(
+    stage_name: str, 
+    config: dict[str, Any], 
+    args: argparse.Namespace
+) -> dict[str, Any] | None:
+    """
+    Run a specific pipeline stage.
+    
+    Args:
+        stage_name: Name of the stage to run
+        config: Pipeline configuration
+        args: Command-line arguments
+        
+    Returns:
+        Results of stage execution, or None if stage is not implemented
+    """
+    if stage_name == "data":
+        # Import here to avoid circular imports
+        from src.pipeline.data_stage import run as run_data_stage
+        logger.info("Running data collection and cleaning stage")
+        return run_data_stage(config, years=args.years, categories=args.categories)
+    
+    # Placeholder stages - not yet implemented
+    stage_modules = {
+        "eda": "src.pipeline.eda_stage",
+        "features": "src.pipeline.feature_stage",
+        "model": "src.pipeline.model_stage",
+        "evaluate": "src.pipeline.eval_stage"
+    }
+    
+    if stage_name in stage_modules:
+        logger.info(f"{stage_name.capitalize()} stage not yet implemented")
+        return None
+    
+    logger.warning(f"Unknown stage: {stage_name}")
+    return None
+
+
 def process_args(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
     """
     Process pipeline arguments and execute operations.
@@ -116,17 +175,7 @@ def process_args(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, 
         dict: Results of pipeline execution
     """
     # Handle data purging
-    if args.clean_all:
-        purge_data("all", config, args.categories, args.years)
-    else:
-        if args.clean_raw:
-            purge_data("raw", config, args.categories, args.years)
-        if args.clean_processed:
-            purge_data("processed", config, args.categories, args.years)
-        if args.clean_features:
-            purge_data("features", config)
-        if args.clean_models:
-            purge_data("models", config)
+    _handle_data_purging(args, config)
     
     # Determine which stages to run
     stages_to_run = args.stages
@@ -136,39 +185,10 @@ def process_args(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, 
     # Run the pipeline stages
     results = {}
     
-    # Import here to avoid circular imports
-    from src.pipeline.data_stage import run as run_data_stage
-    
-    # Data stage
-    if "data" in stages_to_run:
-        logger.info("Running data collection and cleaning stage")
-        results["data"] = run_data_stage(
-            config, 
-            years=args.years,
-            categories=args.categories
-        )
-    
-    # Placeholder for other stages
-    # These would be implemented as we develop the pipeline further
-    if "eda" in stages_to_run:
-        logger.info("Exploratory data analysis stage not yet implemented")
-        # from src.pipeline.eda_stage import run as run_eda_stage
-        # results["eda"] = run_eda_stage(config)
-    
-    if "features" in stages_to_run:
-        logger.info("Feature engineering stage not yet implemented")
-        # from src.pipeline.feature_stage import run as run_feature_stage
-        # results["features"] = run_feature_stage(config)
-    
-    if "model" in stages_to_run:
-        logger.info("Model development stage not yet implemented")
-        # from src.pipeline.model_stage import run as run_model_stage
-        # results["model"] = run_model_stage(config)
-    
-    if "evaluate" in stages_to_run:
-        logger.info("Evaluation stage not yet implemented")
-        # from src.pipeline.eval_stage import run as run_eval_stage
-        # results["evaluate"] = run_eval_stage(config)
+    for stage in stages_to_run:
+        stage_result = _run_pipeline_stage(stage, config, args)
+        if stage_result is not None:
+            results[stage] = stage_result
     
     return results
 

@@ -15,8 +15,10 @@ Years Range: 2003-2025
 
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 
+import polars as pl
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
@@ -324,4 +326,36 @@ def load_category_data(
             return None
     
     # Load the parquet file
-    return load_parquet(file_path) 
+    return load_parquet(file_path)
+
+
+def get_data_loader(category: str) -> Callable[[int, str | Path, bool], pl.DataFrame]:
+    """
+    Get a loader function for a specific data category.
+    
+    Args:
+        category: Data category (play_by_play, player_box, schedules, team_box)
+        
+    Returns:
+        Function: A function that can load data for the specified category
+    """
+    if category not in DATA_CATEGORIES:
+        logger.error(f"Invalid category: {category}")
+        return None
+    
+    def loader(year: int, base_dir: str | Path = DEFAULT_DATA_DIR, 
+              download_if_missing: bool = True) -> pl.DataFrame:
+        """
+        Load data for the specified category and year.
+        
+        Args:
+            year: Year to load data for
+            base_dir: Base directory for storing data
+            download_if_missing: Whether to download the file if it's missing
+            
+        Returns:
+            pl.DataFrame: Polars DataFrame, or None if loading failed
+        """
+        return load_category_data(category, year, base_dir, download_if_missing)
+    
+    return loader 
