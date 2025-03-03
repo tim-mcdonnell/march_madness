@@ -5,6 +5,7 @@ Tests for data loading and downloading functionality.
 import os
 from pathlib import Path
 from unittest import mock
+from collections.abc import Generator
 
 import pyarrow as pa
 import pytest
@@ -38,7 +39,7 @@ class MockResponse:
 
 
 @pytest.fixture
-def setup_test_dir() -> None:
+def setup_test_dir() -> Generator[None, None, None]:
     """Setup and teardown test directory"""
     # Create test directory
     os.makedirs(TEST_DATA_DIR, exist_ok=True)
@@ -52,20 +53,20 @@ def setup_test_dir() -> None:
         shutil.rmtree(TEST_DATA_DIR)
 
 
-def test_create_directory_structure(setup_test_dir: None) -> None:
+def test_create_directory_structure(setup_test_dir: Generator[None, None, None]) -> None:
     """Test creating directory structure"""
     # Create directory structure
-    create_directory_structure()
+    create_directory_structure(TEST_DATA_DIR)
     
     # Check that directories were created
-    for category in DATA_CATEGORIES:
+    for category_name, category_info in DATA_CATEGORIES.items():
         for year in [TEST_YEAR]:
-            path = TEST_DATA_DIR / category["dir_name"] / str(year)
+            path = TEST_DATA_DIR / category_info["dir_name"] / str(year)
             assert path.exists()  # noqa: S101
 
 
 @mock.patch("src.data.loader.requests.get")
-def test_download_file(mock_get: mock.MagicMock, setup_test_dir: None) -> None:
+def test_download_file(mock_get: mock.MagicMock, setup_test_dir: Generator[None, None, None]) -> None:
     """Test downloading a file"""
     # Mock response
     mock_get.return_value = MockResponse()
@@ -99,7 +100,7 @@ def test_download_file(mock_get: mock.MagicMock, setup_test_dir: None) -> None:
 @mock.patch("src.data.loader.download_file")
 def test_download_category_data(
     mock_download: mock.MagicMock, 
-    setup_test_dir: None
+    setup_test_dir: Generator[None, None, None]
 ) -> None:
     """Test downloading category data"""
     # Mock download_file
@@ -122,7 +123,7 @@ def test_download_category_data(
 @mock.patch("src.data.loader.download_category_data")
 def test_download_year_data(
     mock_download_category: mock.MagicMock, 
-    setup_test_dir: None
+    setup_test_dir: Generator[None, None, None]
 ) -> None:
     """Test downloading year data"""
     # Mock download_category_data
@@ -161,7 +162,7 @@ def test_download_year_data(
 @mock.patch("src.data.loader.download_year_data")
 def test_download_all_data(
     mock_download_year: mock.MagicMock, 
-    setup_test_dir: None
+    setup_test_dir: Generator[None, None, None]
 ) -> None:
     """Test downloading all data"""
     # Mock download_year_data
@@ -186,7 +187,7 @@ def test_download_all_data(
 
 
 @mock.patch("src.data.loader.pq.read_table")
-def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: None) -> None:
+def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: Generator[None, None, None]) -> None:
     """Test loading parquet file"""
     # Create a test file
     test_file = TEST_DATA_DIR / "test_file.parquet"
@@ -217,7 +218,7 @@ def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: None) -> 
 def test_load_category_data(
     mock_download_category: mock.MagicMock, 
     mock_load_parquet: mock.MagicMock,
-    setup_test_dir: None
+    setup_test_dir: Generator[None, None, None]
 ) -> None:
     """Test loading category data"""
     # Setup
@@ -243,7 +244,8 @@ def test_load_category_data(
     assert not mock_download_category.called  # noqa: S101
     
     # Test when file doesn't exist but download_if_missing=True
-    os.remove(expected_file)
+    if expected_file.exists():
+        os.remove(expected_file)
     mock_load_parquet.reset_mock()
     mock_download_category.return_value = expected_file
     
@@ -255,7 +257,8 @@ def test_load_category_data(
     assert mock_load_parquet.called  # noqa: S101
     
     # Test when file doesn't exist and download_if_missing=False
-    os.remove(expected_file)
+    if expected_file.exists():
+        os.remove(expected_file)
     mock_load_parquet.reset_mock()
     mock_download_category.reset_mock()
     
