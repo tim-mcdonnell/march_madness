@@ -3,12 +3,13 @@
 
 import polars as pl
 import pytest
+from pathlib import Path
 
 from src.data.cleaner import DataCleaner, EntityResolutionError
 
 
 @pytest.fixture
-def sample_player_box_data():
+def sample_player_box_data() -> pl.DataFrame:
     """Create sample player box score data for testing."""
     return pl.DataFrame({
         'athlete_id': [1, 2, 3, 4, 5],
@@ -22,7 +23,7 @@ def sample_player_box_data():
 
 
 @pytest.fixture
-def sample_team_data():
+def sample_team_data() -> pl.DataFrame:
     """Create sample team data for testing NCAA-specific team name patterns."""
     return pl.DataFrame({
         'team_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -44,7 +45,7 @@ def sample_team_data():
 
 
 @pytest.fixture
-def sample_player_data():
+def sample_player_data() -> pl.DataFrame:
     """Create sample player data for testing entity resolution with transfers."""
     return pl.DataFrame({
         'athlete_id': [1, 2, 2, 3, 4, 4, 5, 5, 6, 6],
@@ -66,12 +67,12 @@ def sample_player_data():
 
 
 @pytest.fixture
-def data_cleaner(tmp_path):
+def data_cleaner(tmp_path: Path) -> DataCleaner:
     """Create a DataCleaner instance with a temporary directory."""
     return DataCleaner(tmp_path)
 
 
-def test_init(data_cleaner, tmp_path):
+def test_init(data_cleaner: DataCleaner, tmp_path: Path) -> None:
     """Test DataCleaner initialization."""
     assert data_cleaner.data_dir == tmp_path
     assert data_cleaner.cleaning_stats == {}
@@ -80,7 +81,7 @@ def test_init(data_cleaner, tmp_path):
     assert data_cleaner._player_id_map == {}
 
 
-def test_handle_missing_values(data_cleaner, sample_player_box_data):
+def test_handle_missing_values(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
     """Test handling of missing values with different strategies."""
     # Test drop strategy
     strategy = {'points': 'drop'}
@@ -110,7 +111,7 @@ def test_handle_missing_values(data_cleaner, sample_player_box_data):
     assert 999 in cleaned_df['points'].to_list()
 
 
-def test_detect_outliers_zscore(data_cleaner, sample_player_box_data):
+def test_detect_outliers_zscore(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
     """Test outlier detection using z-score method."""
     columns = ['field_goals_attempted', 'field_goals_made']
     cleaned_df = data_cleaner._detect_outliers(
@@ -126,7 +127,7 @@ def test_detect_outliers_zscore(data_cleaner, sample_player_box_data):
     assert stats['field_goals_made']['count'] > 0
 
 
-def test_detect_outliers_iqr(data_cleaner, sample_player_box_data):
+def test_detect_outliers_iqr(data_cleaner: DataCleaner, sample_player_box_data: pl.DataFrame) -> None:
     """Test outlier detection using IQR method."""
     columns = ['field_goals_attempted', 'field_goals_made']
     cleaned_df = data_cleaner._detect_outliers(
@@ -142,7 +143,7 @@ def test_detect_outliers_iqr(data_cleaner, sample_player_box_data):
     assert stats['field_goals_made']['count'] > 0
 
 
-def test_string_similarity(data_cleaner):
+def test_string_similarity(data_cleaner: DataCleaner) -> None:
     """Test enhanced string similarity calculation with NCAA-specific patterns."""
     # Test basic similarity
     assert data_cleaner._string_similarity("Duke", "Duke Blue Devils") > 0.7
@@ -157,7 +158,7 @@ def test_string_similarity(data_cleaner):
     assert data_cleaner._string_similarity("UCLA", "California Los Angeles") > 0.8
 
 
-def test_team_name_standardization(data_cleaner, sample_team_data):
+def test_team_name_standardization(data_cleaner: DataCleaner, sample_team_data: pl.DataFrame) -> None:
     """Test team name standardization with NCAA-specific patterns."""
     # Create a mock mapping for testing
     name_columns = ['team_name']
@@ -215,7 +216,7 @@ def test_team_name_standardization(data_cleaner, sample_team_data):
     assert 'columns_updated' in data_cleaner.cleaning_stats['team_name_standardization']['details']
 
 
-def test_team_id_standardization(data_cleaner, sample_team_data):
+def test_team_id_standardization(data_cleaner: DataCleaner, sample_team_data: pl.DataFrame) -> None:
     """Test team ID standardization with NCAA-specific patterns."""
     # Explicitly set the team name map for consistency
     data_cleaner._team_name_map = {
@@ -249,7 +250,7 @@ def test_team_id_standardization(data_cleaner, sample_team_data):
     assert 'team_id_standardization' in data_cleaner.cleaning_stats
 
 
-def test_player_id_resolution(data_cleaner, sample_player_data):
+def test_player_id_resolution(data_cleaner: DataCleaner, sample_player_data: pl.DataFrame) -> None:
     """Test enhanced player ID resolution with transfers and name variations."""
     # Let the system automatically resolve player IDs
     cleaned_df = data_cleaner._resolve_player_ids(
@@ -306,14 +307,14 @@ def test_player_id_resolution(data_cleaner, sample_player_data):
     assert data_cleaner.cleaning_stats['player_id_resolution']['details']['transfers_handled'] > 0
 
 
-def test_clean_data_with_entity_resolution(data_cleaner, sample_player_data, sample_team_data):
+def test_clean_data_with_entity_resolution(data_cleaner: DataCleaner, sample_player_data: pl.DataFrame, sample_team_data: pl.DataFrame) -> None:
     """Test the complete data cleaning process with enhanced entity resolution."""
     # We need to modify this test to not use validation on the sample data
     # Create a mock validation function to bypass validation checks
     import src.data.cleaner
     original_validate = src.data.cleaner.validate_dataframe
     
-    def mock_validate(df, category):
+    def mock_validate(df: pl.DataFrame, category: str) -> tuple[bool, list]:
         return True, []
     
     # Patch the validation function
@@ -368,7 +369,7 @@ def test_clean_data_with_entity_resolution(data_cleaner, sample_player_data, sam
         src.data.cleaner.validate_dataframe = original_validate
 
 
-def test_invalid_entity_resolution(data_cleaner):
+def test_invalid_entity_resolution(data_cleaner: DataCleaner) -> None:
     """Test handling of invalid data for entity resolution."""
     invalid_df = pl.DataFrame({
         'invalid_column': [1, 2, 3]
