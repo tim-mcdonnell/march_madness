@@ -212,9 +212,16 @@ def validate_downloaded_data(config: dict[str, Any]) -> bool:
         return False
 
 
-def process_data(config: dict[str, Any]) -> bool:
-    """
-    Process the validated data for analysis.
+def process_transformations(config: dict[str, Any]) -> bool:
+    """Process data transformations.
+    
+    This function runs all the data transformation steps:
+    1. Team season statistics
+    2. Game results
+    3. Tournament data
+    4. Conference metrics
+    5. Bracket history
+    6. Merged datasets
     
     Args:
         config: Pipeline configuration
@@ -222,23 +229,81 @@ def process_data(config: dict[str, Any]) -> bool:
     Returns:
         True if processing succeeds, False otherwise
     """
-    # This function would contain data processing logic
-    # For now, it's a placeholder that returns success
-    logger.info("Data processing stage (placeholder)")
-    return True
+    from src.data.transformer import process_all_transformations
+    
+    try:
+        # Get raw and processed directories from config
+        raw_dir = config["data"]["raw_dir"]
+        processed_dir = config["data"]["processed_dir"]
+        
+        # Get years from config
+        years = config["data"]["years"]
+        
+        # Get categories from config
+        categories = config["data"]["categories"]
+        
+        logger.info(f"Processing data transformations for years {years}")
+        logger.info(f"Using raw data from {raw_dir}")
+        logger.info(f"Saving processed data to {processed_dir}")
+        
+        # Create the processed directory if it doesn't exist
+        Path(processed_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Run transformations
+        results = process_all_transformations(
+            years=years,
+            categories=categories,
+            data_dir=raw_dir,
+            processed_dir=processed_dir
+        )
+        
+        # Log the number of rows in each result and group by type
+        if results:
+            # First log the normalized data files
+            normalized_categories = ['team_box', 'schedules', 'player_box', 'play_by_play']
+            logger.info("=== Normalized consolidated data files ===")
+            for category in normalized_categories:
+                if category in results and results[category] is not None:
+                    row_count = len(results[category])
+                    logger.info(f"Generated normalized {category}.parquet with {row_count} rows")
+                    
+            # Check if files exist in the processed directory
+            for category in normalized_categories:
+                file_path = Path(processed_dir) / f"{category}.parquet"
+                if file_path.exists():
+                    logger.info(f"Verified file exists: {file_path}")
+            
+            # Then log other derived datasets
+            logger.info("=== Derived datasets ===")
+            for name, df in results.items():
+                if df is not None and name not in normalized_categories:
+                    logger.info(f"Generated {name} with {len(df)} rows")
+                    
+            # Check if team_season_statistics.parquet exists
+            team_stats_path = Path(processed_dir) / "team_season_statistics.parquet"
+            if team_stats_path.exists():
+                logger.info(f"Verified file exists: {team_stats_path}")
+        else:
+            logger.warning("No datasets were generated during transformation")
+        
+        logger.info("Data processing completed successfully")
+        return True
+    except Exception as e:
+        logger.error(f"Error during data processing: {e}", exc_info=True)
+        return False
 
 
 def run_data_stage(config: dict[str, Any]) -> bool:
     """
-    Run the data stage of the pipeline.
+    Run the data collection and cleaning stage.
     
     Args:
         config: Pipeline configuration
         
     Returns:
-        True if the stage succeeds, False otherwise
+        True if the stage completed successfully, False otherwise
     """
-    logger.info("Starting data stage")
+    logger.info("Starting data collection and cleaning stage")
     
     # Validate downloaded data
     if not validate_downloaded_data(config):
@@ -246,7 +311,7 @@ def run_data_stage(config: dict[str, Any]) -> bool:
         return False
     
     # Process data for analysis
-    if not process_data(config):
+    if not process_transformations(config):
         logger.error("Data processing failed, stopping pipeline")
         return False
     
