@@ -61,7 +61,7 @@ def test_create_directory_structure(setup_test_dir: None) -> None:
     for category in DATA_CATEGORIES:
         for year in [TEST_YEAR]:
             path = TEST_DATA_DIR / category["dir_name"] / str(year)
-            pytest.assume(path.exists())
+            assert path.exists()  # noqa: S101
 
 
 @mock.patch("src.data.loader.requests.get")
@@ -75,25 +75,25 @@ def test_download_file(mock_get: mock.MagicMock, setup_test_dir: None) -> None:
     result = download_file("https://test.url", output_path)
     
     # Verify
-    pytest.assume(result is True)
-    pytest.assume(output_path.exists())
-    pytest.assume(mock_get.called)
+    assert result is True  # noqa: S101
+    assert output_path.exists()  # noqa: S101
+    assert mock_get.called  # noqa: S101
     
     # Test with existing file (no overwrite)
     mock_get.reset_mock()
     result = download_file("https://test.url", output_path, overwrite=False)
     
     # Verify
-    pytest.assume(result is True)
-    pytest.assume(not mock_get.called)
+    assert result is True  # noqa: S101
+    assert not mock_get.called  # noqa: S101
     
     # Test with existing file (with overwrite)
     mock_get.reset_mock()
     result = download_file("https://test.url", output_path, overwrite=True)
     
     # Verify
-    pytest.assume(result is True)
-    pytest.assume(mock_get.called)
+    assert result is True  # noqa: S101
+    assert mock_get.called  # noqa: S101
 
 
 @mock.patch("src.data.loader.download_file")
@@ -109,14 +109,14 @@ def test_download_category_data(
     result = download_category_data("play_by_play", TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(result is not None)
-    pytest.assume(mock_download.called)
+    assert result is not None  # noqa: S101
+    assert mock_download.called  # noqa: S101
     
     # Test with invalid category
     result = download_category_data("invalid_category", TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(result is None)
+    assert result is None  # noqa: S101
 
 
 @mock.patch("src.data.loader.download_category_data")
@@ -133,10 +133,10 @@ def test_download_year_data(
     result = download_year_data(TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(len(result) == len(DATA_CATEGORIES))
-    pytest.assume(mock_download_category.call_count == len(DATA_CATEGORIES))
+    assert len(result) == len(DATA_CATEGORIES)  # noqa: S101
+    assert mock_download_category.call_count == len(DATA_CATEGORIES)  # noqa: S101
     for path in result.values():
-        pytest.assume(path == expected_path)
+        assert path == expected_path  # noqa: S101
     
     # Reset mock
     mock_download_category.reset_mock()
@@ -146,16 +146,16 @@ def test_download_year_data(
     result = download_year_data(TEST_YEAR, TEST_DATA_DIR, categories)
     
     # Verify
-    pytest.assume(len(result) == len(categories))
-    pytest.assume(mock_download_category.call_count == len(categories))
+    assert len(result) == len(categories)  # noqa: S101
+    assert mock_download_category.call_count == len(categories)  # noqa: S101
     
     # Test with invalid category
     mock_download_category.reset_mock()
     result = download_year_data(TEST_YEAR, TEST_DATA_DIR, ["invalid_category"])
     
     # Verify
-    pytest.assume(len(result) == 0)
-    pytest.assume(mock_download_category.call_count == 0)
+    assert len(result) == 0  # noqa: S101
+    assert mock_download_category.call_count == 0  # noqa: S101
 
 
 @mock.patch("src.data.loader.download_year_data")
@@ -173,16 +173,16 @@ def test_download_all_data(
     result = download_all_data(2023, 2024, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(len(result) == 2)  # 2 years
-    pytest.assume(mock_download_year.call_count == 2)
+    assert len(result) == 2  # noqa: S101
+    assert mock_download_year.call_count == 2  # noqa: S101
     
     # Test with invalid year range
     mock_download_year.reset_mock()
     result = download_all_data(2024, 2023, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(len(result) == 0)
-    pytest.assume(mock_download_year.call_count == 0)
+    assert len(result) == 0  # noqa: S101
+    assert mock_download_year.call_count == 0  # noqa: S101
 
 
 @mock.patch("src.data.loader.pq.read_table")
@@ -202,14 +202,14 @@ def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: None) -> 
     result = load_parquet(test_file)
     
     # Verify
-    pytest.assume(result == mock_table)
-    pytest.assume(mock_read_table.called)
+    assert result == mock_table  # noqa: S101
+    assert mock_read_table.called  # noqa: S101
     
     # Test with non-existent file
     result = load_parquet(TEST_DATA_DIR / "non_existent.parquet")
     
     # Verify
-    pytest.assume(result is None)
+    assert result is None  # noqa: S101
 
 
 @mock.patch("src.data.loader.load_parquet")
@@ -238,9 +238,9 @@ def test_load_category_data(
     result = load_category_data("play_by_play", TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(result == mock_table)
-    pytest.assume(mock_load_parquet.called)
-    pytest.assume(not mock_download_category.called)
+    assert result == mock_table  # noqa: S101
+    assert mock_load_parquet.called  # noqa: S101
+    assert not mock_download_category.called  # noqa: S101
     
     # Test when file doesn't exist but download_if_missing=True
     os.remove(expected_file)
@@ -251,8 +251,8 @@ def test_load_category_data(
     result = load_category_data("play_by_play", TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(mock_download_category.called)
-    pytest.assume(mock_load_parquet.called)
+    assert mock_download_category.called  # noqa: S101
+    assert mock_load_parquet.called  # noqa: S101
     
     # Test when file doesn't exist and download_if_missing=False
     os.remove(expected_file)
@@ -268,12 +268,12 @@ def test_load_category_data(
     )
     
     # Verify
-    pytest.assume(result is None)
-    pytest.assume(not mock_download_category.called)
-    pytest.assume(not mock_load_parquet.called)
+    assert result is None  # noqa: S101
+    assert not mock_download_category.called  # noqa: S101
+    assert not mock_load_parquet.called  # noqa: S101
     
     # Test with invalid category
     result = load_category_data("invalid_category", TEST_YEAR, TEST_DATA_DIR)
     
     # Verify
-    pytest.assume(result is None) 
+    assert result is None  # noqa: S101 
