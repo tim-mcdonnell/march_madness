@@ -14,7 +14,7 @@ import polars as pl
 from src.data.schema import (
     SCHEMA_MAP,
     get_schema_summary,
-    validate_file,
+    validate_with_year_awareness,
 )
 
 # Configure logging
@@ -113,7 +113,12 @@ def _validate_files_for_category(
     
     # Validate each file
     for file_path in category_files:
-        valid, errors = validate_file(file_path, category, strict_optional=strict_optional)
+        # Use year-aware validation for better handling of recent years
+        valid, errors = validate_with_year_awareness(
+            file_path, 
+            category, 
+            strict_optional=strict_optional
+        )
         
         results[str(file_path)] = {
             'valid': valid,

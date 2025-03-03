@@ -143,9 +143,9 @@ def _run_pipeline_stage(
     """
     if stage_name == "data":
         # Import here to avoid circular imports
-        from src.pipeline.data_stage import run as run_data_stage
+        from src.pipeline.data_stage import run_data_stage
         logger.info("Running data collection and cleaning stage")
-        return run_data_stage(config, years=args.years, categories=args.categories)
+        return {"success": run_data_stage(config)}
     
     # Placeholder stages - not yet implemented
     stage_modules = {
