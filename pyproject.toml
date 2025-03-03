@@ -52,15 +52,16 @@ dev = [
 target-version = "py311"
 line-length = 88
 indent-width = 4
+
+[tool.ruff.lint]
 select = ["E", "F", "B", "I", "N", "UP", "ANN", "S", "A", "C4", "T10", "RET"]
-ignore = ["ANN101"]  # Missing type annotation for `self`
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["src"]
 
 [tool.mypy]
