@@ -1,134 +1,258 @@
 """
-Data collection and cleaning stage for the NCAA March Madness prediction pipeline.
+NCAA March Madness - Data Collection and Cleaning Stage
 
-This module handles data ingestion from the sportsdataverse/hoopR-mbb-data repository
-using the functionality in src/data/loader.py.
+This module handles the data collection and cleaning stage for the NCAA March Madness
+prediction pipeline. It downloads the required data and performs initial cleaning
+and preprocessing.
 """
 
 import logging
 from pathlib import Path
 from typing import Any
 
-from src.data.loader import (
-    download_all_data,
-    download_year_data,
-    load_category_data,
-)
-from src.pipeline.data_management import ensure_directories
+# Import data loading functions
+from src.data.loader import download_all_data, download_year_data
 
+# Import validation functions
+from src.data.validation import (
+    DataValidationError,
+    generate_validation_report,
+    validate_data_consistency,
+    validate_raw_data,
+)
+
+# Import pipeline configuration functions
+from src.pipeline.config import (
+    get_enabled_categories,
+    get_enabled_years,
+    get_raw_data_dir,
+    get_validation_config,
+    get_validation_report_path,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, 
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
 def run(
-    config: dict[str, Any],
-    years: list[int] | None = None,
-    categories: list[str] | None = None,
+    config: dict[str, Any], 
+    years: list[int] | None = None, 
+    categories: list[str] | None = None
 ) -> dict[str, Any]:
     """
-    Run the data collection stage.
+    Run the data collection and cleaning stage.
     
     Args:
-        config: Pipeline configuration
-        years: Years to process (None for all years in config)
-        categories: Data categories to process (None for all)
+        config: Pipeline configuration dictionary
+        years: List of years to process. If None, uses all years from config.
+        categories: List of data categories to process. If None, uses all categories from config.
         
     Returns:
-        dict: Results dictionary with stage outputs
+        Dictionary containing the results of the data collection stage
     """
-    # Create necessary directories
-    ensure_directories(config)
+    logger.info("Starting data collection and cleaning stage")
     
-    # Get raw data directory from config
+    # Ensure necessary directories exist
     raw_dir = Path(config["data"]["raw_dir"])
+    raw_dir.mkdir(parents=True, exist_ok=True)
     
-    # Use all years and categories from config if not specified
+    # Use years and categories from config if not specified
     if years is None:
         years = config["data"]["years"]
-    
     if categories is None:
         categories = config["data"]["categories"]
     
-    logger.info(f"Running data collection for years: {years}")
-    logger.info(f"Categories: {categories}")
+    logger.info(f"Processing years: {years}")
+    logger.info(f"Processing categories: {categories}")
     
-    # Download data
-    results = {}
+    results = {
+        "years": years,
+        "categories": categories,
+        "data": {}
+    }
     
-    # If multiple years, use download_all_data
-    if len(years) > 1:
-        start_year = min(years)
-        end_year = max(years)
-        
-        # Check if this is a continuous range
-        if set(years) == set(range(start_year, end_year + 1)):
-            logger.info(f"Downloading data for years {start_year}-{end_year}")
-            downloads = download_all_data(
-                start_year=start_year,
-                end_year=end_year,
-                base_dir=raw_dir,
-                categories=categories,
-            )
-            
-            # Add to results
-            for year, year_downloads in downloads.items():
-                results[year] = {"downloaded": year_downloads}
-        else:
-            # Non-continuous range, download each year separately
-            for year in years:
-                logger.info(f"Downloading data for year {year}")
-                year_downloads = download_year_data(
-                    year=year,
-                    base_dir=raw_dir,
-                    categories=categories,
-                )
-                results[year] = {"downloaded": year_downloads}
+    # Check if we're downloading all years or specific years
+    is_continuous_range = years == list(range(min(years), max(years) + 1))
     
-    # Single year
-    elif len(years) == 1:
-        year = years[0]
-        logger.info(f"Downloading data for year {year}")
-        year_downloads = download_year_data(
-            year=year,
+    if is_continuous_range:
+        # Download all data at once for a continuous range of years
+        logger.info(f"Downloading data for years {min(years)}-{max(years)}")
+        data = download_all_data(
             base_dir=raw_dir,
             categories=categories,
+            start_year=min(years),
+            end_year=max(years)
         )
-        results[year] = {"downloaded": year_downloads}
-    
-    # No years specified, use default behavior
-    else:
-        logger.warning("No years specified for data collection")
-        return {"error": "No years specified"}
-    
-    # Load some data to check it worked
-    loaded_samples = {}
-    for year in years:
-        year_samples = {}
-        for category in categories:
-            try:
-                # Load the data but don't store the whole table in results
-                table = load_category_data(
-                    category=category,
-                    year=year,
-                    base_dir=raw_dir,
-                )
-                
-                if table is not None:
-                    # Store metadata about the loaded table
-                    year_samples[category] = {
-                        "rows": len(table),
-                        "columns": len(table.column_names),
-                        "column_names": table.column_names,
-                    }
-                else:
-                    year_samples[category] = {"error": "Failed to load data"}
-            except Exception as e:
-                logger.error(f"Error loading {category} data for year {year}: {e}")
-                year_samples[category] = {"error": str(e)}
         
-        loaded_samples[year] = year_samples
+        for year in years:
+            results["data"][year] = {
+                "downloaded": True,
+                "categories": {}
+            }
+            for category in categories:
+                results["data"][year]["categories"][category] = {
+                    "downloaded": category in data[year],
+                    "file_path": (
+                        str(raw_dir / category / f"{category}_{year}.parquet") 
+                        if category in data[year] else None
+                    )
+                }
+    else:
+        # Download data for each year individually
+        for year in years:
+            logger.info(f"Downloading data for year {year}")
+            data = download_year_data(
+                base_dir=raw_dir,
+                categories=categories,
+                year=year
+            )
+            
+            results["data"][year] = {
+                "downloaded": True,
+                "categories": {}
+            }
+            for category in categories:
+                results["data"][year]["categories"][category] = {
+                    "downloaded": category in data,
+                    "file_path": (
+                        str(raw_dir / category / f"{category}_{year}.parquet") 
+                        if category in data else None
+                    )
+                }
     
-    # Add loaded samples to results
-    results["loaded_samples"] = loaded_samples
+    # Validate downloaded data
+    validate_downloaded_data(config)
     
-    logger.info("Data collection stage completed")
-    return results 
+    logger.info("Data collection and cleaning stage completed")
+    return results
+
+
+def validate_downloaded_data(config: dict[str, Any]) -> bool:
+    """
+    Validate the downloaded data files against schema and consistency checks.
+    
+    Args:
+        config: Pipeline configuration
+        
+    Returns:
+        True if validation passes, False otherwise
+    """
+    validation_config = get_validation_config(config)
+    
+    if not validation_config.get('enabled', True):
+        logger.info("Data validation is disabled in configuration")
+        return True
+    
+    raw_data_dir = get_raw_data_dir(config)
+    categories = get_enabled_categories(config)
+    years = get_enabled_years(config)
+    strict = validation_config.get('strict', False)
+    strict_optional = validation_config.get('strict_optional', False)
+    check_consistency = validation_config.get('check_consistency', True)
+    report_path = get_validation_report_path(config)
+    
+    logger.info(f"Validating data in {raw_data_dir}")
+    logger.info(
+        f"Validating raw data: categories={categories}, years={years}, "
+        f"strict={strict}, strict_optional={strict_optional}"
+    )
+    
+    try:
+        # Validate raw data files against schema
+        validation_results = validate_raw_data(
+            data_dir=raw_data_dir, 
+            categories=categories, 
+            years=years, 
+            strict=strict,
+            strict_optional=strict_optional
+        )
+        
+        # Check cross-category data consistency if enabled
+        if check_consistency:
+            logger.info("Checking data consistency across categories")
+            consistency_results = validate_data_consistency(
+                data_dir=raw_data_dir, 
+                categories=categories, 
+                years=years, 
+                strict=strict
+            )
+            
+            # Merge consistency results with validation results
+            for key, result in consistency_results.items():
+                validation_results[f"consistency_{key}"] = result
+        
+        # Generate validation report if report path is specified
+        if report_path:
+            generate_validation_report(validation_results, report_path)
+            logger.info(f"Validation report written to {report_path}")
+        
+        # Check if validation passed
+        validation_passed = all(
+            result.get('valid', False) 
+            for result in validation_results.values() 
+            if isinstance(result, dict) and 'valid' in result
+        )
+        
+        if validation_passed:
+            logger.info("Data validation passed")
+        else:
+            logger.error("Data validation failed")
+            
+        return validation_passed
+        
+    except DataValidationError as e:
+        logger.error(f"Data validation error: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Unexpected error during data validation: {e}", exc_info=True)
+        return False
+
+
+def process_data(config: dict[str, Any]) -> bool:
+    """
+    Process the validated data for analysis.
+    
+    Args:
+        config: Pipeline configuration
+        
+    Returns:
+        True if processing succeeds, False otherwise
+    """
+    # This function would contain data processing logic
+    # For now, it's a placeholder that returns success
+    logger.info("Data processing stage (placeholder)")
+    return True
+
+
+def run_data_stage(config: dict[str, Any]) -> bool:
+    """
+    Run the data stage of the pipeline.
+    
+    Args:
+        config: Pipeline configuration
+        
+    Returns:
+        True if the stage succeeds, False otherwise
+    """
+    logger.info("Starting data stage")
+    
+    # Validate downloaded data
+    if not validate_downloaded_data(config):
+        logger.error("Data validation failed, stopping pipeline")
+        return False
+    
+    # Process data for analysis
+    if not process_data(config):
+        logger.error("Data processing failed, stopping pipeline")
+        return False
+    
+    logger.info("Data stage completed successfully")
+    return True
+
+
+if __name__ == "__main__":
+    pass 
