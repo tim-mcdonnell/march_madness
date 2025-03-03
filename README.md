@@ -84,6 +84,12 @@ ncaa-march-madness-predictor/
 │   ├── __init__.py
 │   ├── test_data.py
 │   └── test_models.py
+├── .github/                # GitHub configurations
+│   └── workflows/          # GitHub Actions workflow files
+│       ├── test.yml        # Testing workflow
+│       ├── run_pipeline.yml # Pipeline execution workflow 
+│       ├── badges.yml      # Status badges workflow
+│       └── docs.yml        # Documentation workflow
 └── docs/                   # Additional documentation
     └── methodology.md      # Detailed methodology documentation
 ```
@@ -199,6 +205,47 @@ features:
 model:
   # Configuration for model training and evaluation
 ```
+
+## 🔄 CI/CD Workflow
+
+This project uses GitHub Actions for continuous integration and deployment, ensuring code quality and automating routine tasks.
+
+### Automated Workflows
+
+- **Testing**: Automatically runs tests on all pull requests and pushes to main branches
+- **Pipeline Execution**: Daily scheduled runs to update data during the basketball season
+- **Documentation**: Automatically builds and publishes documentation to GitHub Pages
+- **Status Badges**: Generates coverage and status badges for the repository
+
+### GitHub Actions Configuration
+
+Our CI/CD workflows are defined in the `.github/workflows` directory:
+
+```
+.github/workflows/
+├── test.yml           # Runs tests on PRs and pushes
+├── run_pipeline.yml   # Scheduled pipeline execution
+├── badges.yml         # Generates status badges
+└── docs.yml           # Builds and deploys documentation
+```
+
+### Manual Workflow Triggers
+
+Most workflows can also be triggered manually through the GitHub Actions interface:
+
+1. Navigate to the Actions tab in the GitHub repository
+2. Select the workflow you want to run
+3. Click "Run workflow"
+4. Configure any input parameters
+5. Start the workflow
+
+### Pipeline Status Dashboard
+
+During basketball season, a status dashboard is automatically updated daily showing:
+- Last successful data ingestion
+- Current data coverage
+- Model performance metrics
+- Prediction confidence scores
 
 ## 🔍 Code Standards
 
