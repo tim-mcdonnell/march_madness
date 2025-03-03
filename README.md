@@ -46,22 +46,26 @@ ncaa-march-madness-predictor/
 ├── README.md               # Project overview and documentation
 ├── requirements.txt        # Python dependencies
 ├── .gitignore              # Files to exclude from git
+├── run_pipeline.py         # Main pipeline execution script
+├── config/                 # Configuration files
+│   └── pipeline_config.yaml # Pipeline configuration
 ├── data/                   # Data directory
 │   ├── raw/                # Original unmodified data
 │   ├── processed/          # Cleaned and transformed data
 │   └── README.md           # Data documentation
 ├── notebooks/              # Jupyter notebooks
-│   ├── 01_data_cleaning.ipynb
-│   ├── 02_exploratory_analysis.ipynb
-│   ├── 03_feature_engineering.ipynb
-│   ├── 04_model_development.ipynb
-│   └── 05_evaluation.ipynb
 ├── src/                    # Source code
 │   ├── __init__.py
 │   ├── data/               # Data processing modules
 │   │   ├── __init__.py
 │   │   ├── loader.py       # Data loading functions
 │   │   └── cleaner.py      # Data cleaning functions
+│   ├── pipeline/           # Pipeline framework
+│   │   ├── __init__.py     # Pipeline package definition
+│   │   ├── cli.py          # Command-line interface
+│   │   ├── config.py       # Configuration management
+│   │   ├── data_management.py # Data cleaning/purging utilities
+│   │   └── data_stage.py   # Data stage implementation
 │   ├── features/           # Feature engineering
 │   │   ├── __init__.py
 │   │   └── builders.py     # Feature creation functions
@@ -124,7 +128,77 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-4. Set up data ingestion pipeline (see detailed instructions in the data README)
+4. Run the pipeline:
+```bash
+# Create a default configuration file
+python run_pipeline.py --create-config
+
+# Run the full pipeline
+python run_pipeline.py
+
+# Run only the data collection stage
+python run_pipeline.py --stages data
+```
+
+## 🚚 Pipeline Framework
+
+This project includes a modular pipeline framework that manages the end-to-end workflow, from data ingestion to model evaluation.
+
+### Pipeline Components
+
+- **Configuration Management**: YAML-based configuration with validation
+- **Data Management**: Utilities for organizing, cleaning, and purging data
+- **Modular Stages**: Separate pipeline stages that can run independently
+- **Logging**: Comprehensive logging for debugging and tracking progress
+
+### Pipeline CLI Options
+
+The pipeline can be run with various options:
+
+```bash
+# Run the full pipeline
+python run_pipeline.py
+
+# Run only specific stages
+python run_pipeline.py --stages data features
+
+# Process specific years
+python run_pipeline.py --years 2023 2024 2025
+
+# Process specific data categories
+python run_pipeline.py --categories team_box player_box
+
+# Clean data before running
+python run_pipeline.py --clean-raw      # Clean raw data
+python run_pipeline.py --clean-all      # Clean all data
+
+# Use a custom configuration
+python run_pipeline.py --config custom_config.yaml
+```
+
+### Configuration
+
+The pipeline is configured using a YAML file (`config/pipeline_config.yaml`):
+
+```yaml
+# Data paths and selections
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  feature_dir: "data/features"
+  model_dir: "models"
+  results_dir: "results"
+  years: [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025]
+  categories: ["play_by_play", "player_box", "schedules", "team_box"]
+
+# Feature settings
+features:
+  # Configuration for feature engineering
+
+# Model settings
+model:
+  # Configuration for model training and evaluation
+```
 
 ## 🔍 Code Standards
 
