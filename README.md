@@ -2,6 +2,9 @@
 
 A data science approach to building optimal March Madness brackets using historical NCAA men's basketball data.
 
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/yourusername/yourgistid/raw/coverage.json)](https://github.com/tim-mcdonnell/march_madness/actions/workflows/badges.yml)
+[![Pipeline Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/yourusername/yourgistid/raw/pipeline-status.json)](https://github.com/tim-mcdonnell/march_madness/actions/workflows/run_pipeline.yml)
+
 ## 📋 Project Overview
 
 This project aims to develop a machine learning model that predicts NCAA March Madness tournament outcomes using 22 years of historical data. By analyzing team statistics, tournament performance, and other relevant factors, we'll create a data-driven approach to bracket construction that outperforms traditional methods.
