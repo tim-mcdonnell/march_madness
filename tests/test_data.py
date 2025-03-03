@@ -1,11 +1,9 @@
-"""
-Tests for data loading and downloading functionality.
-"""
+"""Tests for data loading and downloading functionality."""
 
 import os
+from collections.abc import Generator
 from pathlib import Path
 from unittest import mock
-from collections.abc import Generator
 
 import pyarrow as pa
 import pytest
@@ -25,6 +23,9 @@ from src.data.loader import (
 TEST_DATA_DIR = Path("tests/data_test")
 TEST_YEAR = 2023
 
+# Type alias for fixture return type to avoid line length issues
+TestFixture = Generator[None, None, None]
+
 
 class MockResponse:
     """Mock response object for requests.get"""
@@ -39,7 +40,7 @@ class MockResponse:
 
 
 @pytest.fixture
-def setup_test_dir() -> Generator[None, None, None]:
+def setup_test_dir() -> TestFixture:
     """Setup and teardown test directory"""
     # Create test directory
     os.makedirs(TEST_DATA_DIR, exist_ok=True)
@@ -53,20 +54,20 @@ def setup_test_dir() -> Generator[None, None, None]:
         shutil.rmtree(TEST_DATA_DIR)
 
 
-def test_create_directory_structure(setup_test_dir: Generator[None, None, None]) -> None:
+def test_create_directory_structure(setup_test_dir: TestFixture) -> None:
     """Test creating directory structure"""
     # Create directory structure
     create_directory_structure(TEST_DATA_DIR)
     
     # Check that directories were created
-    for category_name, category_info in DATA_CATEGORIES.items():
+    for _category_name, category_info in DATA_CATEGORIES.items():
         for year in [TEST_YEAR]:
             path = TEST_DATA_DIR / category_info["dir_name"] / str(year)
-            assert path.exists()  # noqa: S101
+            assert path.exists(), f"Path {path} does not exist"  # noqa: S101
 
 
 @mock.patch("src.data.loader.requests.get")
-def test_download_file(mock_get: mock.MagicMock, setup_test_dir: Generator[None, None, None]) -> None:
+def test_download_file(mock_get: mock.MagicMock, setup_test_dir: TestFixture) -> None:
     """Test downloading a file"""
     # Mock response
     mock_get.return_value = MockResponse()
@@ -100,7 +101,7 @@ def test_download_file(mock_get: mock.MagicMock, setup_test_dir: Generator[None,
 @mock.patch("src.data.loader.download_file")
 def test_download_category_data(
     mock_download: mock.MagicMock, 
-    setup_test_dir: Generator[None, None, None]
+    setup_test_dir: TestFixture
 ) -> None:
     """Test downloading category data"""
     # Mock download_file
@@ -123,7 +124,7 @@ def test_download_category_data(
 @mock.patch("src.data.loader.download_category_data")
 def test_download_year_data(
     mock_download_category: mock.MagicMock, 
-    setup_test_dir: Generator[None, None, None]
+    setup_test_dir: TestFixture
 ) -> None:
     """Test downloading year data"""
     # Mock download_category_data
@@ -162,7 +163,7 @@ def test_download_year_data(
 @mock.patch("src.data.loader.download_year_data")
 def test_download_all_data(
     mock_download_year: mock.MagicMock, 
-    setup_test_dir: Generator[None, None, None]
+    setup_test_dir: TestFixture
 ) -> None:
     """Test downloading all data"""
     # Mock download_year_data
@@ -187,7 +188,10 @@ def test_download_all_data(
 
 
 @mock.patch("src.data.loader.pq.read_table")
-def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: Generator[None, None, None]) -> None:
+def test_load_parquet(
+    mock_read_table: mock.MagicMock, 
+    setup_test_dir: TestFixture
+) -> None:
     """Test loading parquet file"""
     # Create a test file
     test_file = TEST_DATA_DIR / "test_file.parquet"
@@ -218,7 +222,7 @@ def test_load_parquet(mock_read_table: mock.MagicMock, setup_test_dir: Generator
 def test_load_category_data(
     mock_download_category: mock.MagicMock, 
     mock_load_parquet: mock.MagicMock,
-    setup_test_dir: Generator[None, None, None]
+    setup_test_dir: TestFixture
 ) -> None:
     """Test loading category data"""
     # Setup
