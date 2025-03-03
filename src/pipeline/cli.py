@@ -6,8 +6,7 @@ This module provides the CLI parser and argument handling for the pipeline.
 
 import argparse
 import logging
-from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 from src.pipeline.data_management import purge_data
 
@@ -105,7 +104,7 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def process_args(args: argparse.Namespace, config: Dict[str, Any]) -> Dict[str, Any]:
+def process_args(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
     """
     Process pipeline arguments and execute operations.
     

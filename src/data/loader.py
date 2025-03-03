@@ -16,7 +16,6 @@ Years Range: 2003-2025
 import logging
 import os
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Union
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -59,7 +58,7 @@ DATA_CATEGORIES = {
 DEFAULT_DATA_DIR = Path("data/raw")
 
 
-def create_directory_structure(base_dir: Union[str, Path] = DEFAULT_DATA_DIR) -> None:
+def create_directory_structure(base_dir: str | Path = DEFAULT_DATA_DIR) -> None:
     """
     Create the directory structure for storing downloaded data.
     
@@ -86,7 +85,7 @@ def create_directory_structure(base_dir: Union[str, Path] = DEFAULT_DATA_DIR) ->
 
 def download_file(
     url: str, 
-    output_path: Union[str, Path], 
+    output_path: str | Path, 
     overwrite: bool = False,
 ) -> bool:
     """
@@ -109,7 +108,7 @@ def download_file(
     
     try:
         logger.info(f"Downloading file from {url} to {output_path}")
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=30)
         
         # Check if the request was successful
         if response.status_code == 200:
@@ -133,11 +132,10 @@ def download_file(
             
             logger.info(f"Download successful: {output_path}")
             return True
-        else:
-            logger.warning(
-                f"Failed to download file: {url}, Status code: {response.status_code}"
-            )
-            return False
+        logger.warning(
+            f"Failed to download file: {url}, Status code: {response.status_code}"
+        )
+        return False
     except Exception as e:
         logger.error(f"Error downloading file {url}: {e}")
         return False
@@ -146,9 +144,9 @@ def download_file(
 def download_category_data(
     category: str, 
     year: int, 
-    base_dir: Union[str, Path] = DEFAULT_DATA_DIR,
+    base_dir: str | Path = DEFAULT_DATA_DIR,
     overwrite: bool = False,
-) -> Optional[Path]:
+) -> Path | None:
     """
     Download data for a specific category and year.
     
@@ -183,10 +181,10 @@ def download_category_data(
 
 def download_year_data(
     year: int, 
-    base_dir: Union[str, Path] = DEFAULT_DATA_DIR,
-    categories: Optional[List[str]] = None,
+    base_dir: str | Path = DEFAULT_DATA_DIR,
+    categories: list[str] | None = None,
     overwrite: bool = False,
-) -> Dict[str, Optional[Path]]:
+) -> dict[str, Path | None]:
     """
     Download data for all categories for a specific year.
     
@@ -225,10 +223,10 @@ def download_year_data(
 def download_all_data(
     start_year: int = 2003,
     end_year: int = 2025,
-    base_dir: Union[str, Path] = DEFAULT_DATA_DIR,
-    categories: Optional[List[str]] = None,
+    base_dir: str | Path = DEFAULT_DATA_DIR,
+    categories: list[str] | None = None,
     overwrite: bool = False,
-) -> Dict[int, Dict[str, Optional[Path]]]:
+) -> dict[int, dict[str, Path | None]]:
     """
     Download data for all years and categories.
     
@@ -260,7 +258,7 @@ def download_all_data(
     return results
 
 
-def load_parquet(file_path: Union[str, Path]) -> Optional[pa.Table]:
+def load_parquet(file_path: str | Path) -> pa.Table | None:
     """
     Load a parquet file into a PyArrow table.
     
@@ -278,8 +276,7 @@ def load_parquet(file_path: Union[str, Path]) -> Optional[pa.Table]:
     
     try:
         logger.info(f"Loading parquet file: {file_path}")
-        table = pq.read_table(file_path)
-        return table
+        return pq.read_table(file_path)
     except Exception as e:
         logger.error(f"Error loading parquet file {file_path}: {e}")
         return None
@@ -288,9 +285,9 @@ def load_parquet(file_path: Union[str, Path]) -> Optional[pa.Table]:
 def load_category_data(
     category: str,
     year: int,
-    base_dir: Union[str, Path] = DEFAULT_DATA_DIR,
+    base_dir: str | Path = DEFAULT_DATA_DIR,
     download_if_missing: bool = True,
-) -> Optional[pa.Table]:
+) -> pa.Table | None:
     """
     Load data for a specific category and year.
     

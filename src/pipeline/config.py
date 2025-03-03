@@ -5,9 +5,8 @@ This module handles loading, validating, and accessing pipeline configuration.
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any
 
 import yaml
 
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG_PATH = Path("config/pipeline_config.yaml")
 
 
-def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+def load_config(config_path: str | None = None) -> dict[str, Any]:
     """
     Load pipeline configuration from YAML file.
     
@@ -41,10 +40,10 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
     
     try:
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             config = yaml.safe_load(f)
     except Exception as e:
-        raise ValueError(f"Failed to load configuration: {e}")
+        raise ValueError(f"Failed to load configuration: {e}") from e
     
     # Validate configuration
     validate_config(config)
@@ -52,7 +51,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     return config
 
 
-def validate_config(config: Dict[str, Any]) -> None:
+def validate_config(config: dict[str, Any]) -> None:
     """
     Validate pipeline configuration.
     
@@ -85,7 +84,7 @@ def validate_config(config: Dict[str, Any]) -> None:
         ]
 
 
-def get_default_config() -> Dict[str, Any]:
+def get_default_config() -> dict[str, Any]:
     """
     Get default pipeline configuration.
     
@@ -117,7 +116,7 @@ def get_default_config() -> Dict[str, Any]:
     }
 
 
-def create_default_config(output_path: Optional[str] = None) -> str:
+def create_default_config(output_path: str | None = None) -> str:
     """
     Create default configuration file.
     

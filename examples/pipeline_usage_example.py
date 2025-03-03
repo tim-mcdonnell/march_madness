@@ -21,12 +21,12 @@ from pathlib import Path
 # Add the project root to the Python path if running directly
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.pipeline.config import load_config, create_default_config
-from src.pipeline.data_management import purge_data, ensure_directories
+from src.pipeline.config import create_default_config, load_config
+from src.pipeline.data_management import ensure_directories, purge_data
 from src.pipeline.data_stage import run as run_data_stage
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Configure logging for the example script."""
     logging.basicConfig(
         level=logging.INFO,
@@ -35,7 +35,7 @@ def setup_logging():
     )
 
 
-def example_1_basic_usage():
+def example_1_basic_usage() -> dict:
     """Basic pipeline usage example."""
     logger = logging.getLogger("example_1")
     logger.info("Example 1: Basic Pipeline Usage")
@@ -55,19 +55,21 @@ def example_1_basic_usage():
     ensure_directories(config)
     
     # Run the data stage with default settings
-    logger.info("Running data stage with default settings (limited to 2024-2025 for demo)")
+    logger.info("Running data stage with default settings "
+               "(limited to 2024-2025 for demo)")
     results = run_data_stage(config, years=[2024, 2025])
     
     # Display results summary
     logger.info(f"Data stage completed for {len(results) - 1} years")
     for year in results:
         if year != "loaded_samples":
-            logger.info(f"Year {year}: Downloaded {len(results[year]['downloaded'])} categories")
+            logger.info(f"Year {year}: Downloaded "
+                       f"{len(results[year]['downloaded'])} categories")
     
     return results
 
 
-def example_2_data_selection():
+def example_2_data_selection() -> dict:
     """Example showing how to select specific data."""
     logger = logging.getLogger("example_2")
     logger.info("Example 2: Selecting Specific Data")
@@ -99,7 +101,7 @@ def example_2_data_selection():
     return results
 
 
-def example_3_data_cleaning():
+def example_3_data_cleaning() -> dict:
     """Example showing how to clean data before processing."""
     logger = logging.getLogger("example_3")
     logger.info("Example 3: Data Cleaning")
@@ -126,7 +128,7 @@ def example_3_data_cleaning():
     return results
 
 
-def main():
+def main() -> int:
     """Run all examples."""
     setup_logging()
     logging.info("NCAA March Madness Pipeline Usage Examples")

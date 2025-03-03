@@ -7,12 +7,11 @@ using the functionality in src/data/loader.py.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Any
 
 from src.data.loader import (
-    download_category_data,
-    download_year_data,
     download_all_data,
+    download_year_data,
     load_category_data,
 )
 from src.pipeline.data_management import ensure_directories
@@ -21,10 +20,10 @@ logger = logging.getLogger(__name__)
 
 
 def run(
-    config: Dict[str, Any],
-    years: Optional[List[int]] = None,
-    categories: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    config: dict[str, Any],
+    years: list[int] | None = None,
+    categories: list[str] | None = None,
+) -> dict[str, Any]:
     """
     Run the data collection stage.
     

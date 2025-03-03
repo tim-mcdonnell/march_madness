@@ -7,12 +7,11 @@ sportsdataverse/hoopR-mbb-data GitHub repository.
 
 import logging
 import os
-from pathlib import Path
 
 from src.data.loader import (
+    download_all_data,
     download_category_data,
     download_year_data,
-    download_all_data,
     load_category_data,
 )
 
@@ -30,7 +29,7 @@ logger = logging.getLogger("data_example")
 os.makedirs("data/raw", exist_ok=True)
 
 
-def download_single_category_example():
+def download_single_category_example() -> None:
     """Example showing how to download a single category for a specific year."""
     logger.info("Downloading play-by-play data for 2023")
     file_path = download_category_data("play_by_play", 2023)
@@ -41,7 +40,7 @@ def download_single_category_example():
         logger.error("Download failed")
 
 
-def download_year_example():
+def download_year_example() -> None:
     """Example showing how to download all categories for a specific year."""
     logger.info("Downloading all data for 2023")
     results = download_year_data(2023)
@@ -54,7 +53,7 @@ def download_year_example():
             logger.error(f"Failed to download {category} data")
 
 
-def download_specific_categories_example():
+def download_specific_categories_example() -> None:
     """Example showing how to download specific categories for a year."""
     logger.info("Downloading specific categories for 2023")
     categories = ["team_box", "schedules"]
@@ -68,7 +67,7 @@ def download_specific_categories_example():
             logger.error(f"Failed to download {category} data")
 
 
-def download_multiple_years_example():
+def download_multiple_years_example() -> None:
     """Example showing how to download data for multiple years."""
     logger.info("Downloading data for years 2022-2023")
     results = download_all_data(2022, 2023)
@@ -83,14 +82,15 @@ def download_multiple_years_example():
                 logger.error(f"  - Failed to download {category} data")
 
 
-def load_and_examine_data_example():
+def load_and_examine_data_example() -> None:
     """Example showing how to load and examine downloaded data."""
     logger.info("Loading team box score data for 2023")
     table = load_category_data("team_box", 2023)
     
     if table is not None:
         # Print basic information about the table
-        logger.info(f"Loaded table with {len(table)} rows and {len(table.column_names)} columns")
+        logger.info(f"Loaded table with {len(table)} rows and "
+                   f"{len(table.column_names)} columns")
         logger.info(f"Columns: {table.column_names}")
         
         # Display first few rows (head)
@@ -100,7 +100,7 @@ def load_and_examine_data_example():
         logger.error("Failed to load data")
 
 
-def download_with_caching_example():
+def download_with_caching_example() -> None:
     """Example showing how caching works to avoid re-downloading files."""
     logger.info("Demonstrating caching behavior")
     

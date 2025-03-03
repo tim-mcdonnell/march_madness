@@ -6,19 +6,17 @@ for clean runs of the pipeline.
 """
 
 import logging
-import os
-import shutil
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 def purge_data(
     data_type: str,
-    config: Dict[str, Any],
-    categories: Optional[List[str]] = None,
-    years: Optional[List[int]] = None
+    config: dict[str, Any],
+    categories: list[str] | None = None,
+    years: list[int] | None = None
 ) -> None:
     """
     Purge data of a specific type.
@@ -34,7 +32,9 @@ def purge_data(
     """
     valid_types = ["raw", "processed", "features", "models", "all"]
     if data_type not in valid_types:
-        raise ValueError(f"Invalid data type: {data_type}. Must be one of {valid_types}")
+        raise ValueError(
+            f"Invalid data type: {data_type}. Must be one of {valid_types}"
+        )
     
     if data_type == "all":
         # Purge all data types
@@ -55,9 +55,9 @@ def purge_data(
 
 
 def purge_raw_data(
-    config: Dict[str, Any],
-    categories: Optional[List[str]] = None,
-    years: Optional[List[int]] = None
+    config: dict[str, Any],
+    categories: list[str] | None = None,
+    years: list[int] | None = None
 ) -> None:
     """
     Purge raw data files.
@@ -85,7 +85,8 @@ def purge_raw_data(
             logger.warning(f"Category directory does not exist: {category_dir}")
             continue
         
-        # If years specified, delete specific files, otherwise delete all files in category
+        # If years specified, delete specific files, otherwise delete all files 
+        # in category
         if years is not None:
             for year in years:
                 # The file pattern depends on the category
@@ -107,9 +108,9 @@ def purge_raw_data(
 
 
 def purge_processed_data(
-    config: Dict[str, Any],
-    categories: Optional[List[str]] = None,
-    years: Optional[List[int]] = None
+    config: dict[str, Any],
+    categories: list[str] | None = None,
+    years: list[int] | None = None
 ) -> None:
     """
     Purge processed data files.
@@ -136,7 +137,8 @@ def purge_processed_data(
         # Check if file matches category and year filters
         should_delete = False
         
-        # Extract category and year from filename (e.g., "play_by_play_2023_cleaned.parquet")
+        # Extract category and year from filename 
+        # (e.g., "play_by_play_2023_cleaned.parquet")
         file_parts = filename.split('_')
         
         if len(file_parts) >= 3:
@@ -171,7 +173,7 @@ def purge_processed_data(
             file_path.unlink()
 
 
-def purge_feature_data(config: Dict[str, Any]) -> None:
+def purge_feature_data(config: dict[str, Any]) -> None:
     """
     Purge feature data files.
     
@@ -194,7 +196,7 @@ def purge_feature_data(config: Dict[str, Any]) -> None:
         file_path.unlink()
 
 
-def purge_model_data(config: Dict[str, Any]) -> None:
+def purge_model_data(config: dict[str, Any]) -> None:
     """
     Purge model data files.
     
@@ -221,7 +223,7 @@ def purge_model_data(config: Dict[str, Any]) -> None:
         file_path.unlink()
 
 
-def ensure_directories(config: Dict[str, Any]) -> None:
+def ensure_directories(config: dict[str, Any]) -> None:
     """
     Ensure all required directories exist.
     

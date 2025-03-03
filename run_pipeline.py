@@ -23,14 +23,11 @@ Example usage:
     python run_pipeline.py --clean-all
 """
 
-import argparse
 import logging
 import sys
-from pathlib import Path
-from typing import Dict, Any
 
 from src.pipeline.cli import create_parser, process_args, setup_logging
-from src.pipeline.config import load_config, create_default_config
+from src.pipeline.config import create_default_config, load_config
 
 
 def main() -> int:
