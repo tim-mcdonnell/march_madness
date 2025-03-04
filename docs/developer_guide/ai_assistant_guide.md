@@ -33,15 +33,17 @@ march_madness/
 │   └── features/           # Engineered features
 ├── docs/                   # Documentation files
 ├── models/                 # Saved model files
-├── notebooks/              # Jupyter notebooks (exploratory)
+├── reports/                # Analysis reports and visualizations
+│   ├── findings/           # Markdown reports of analysis findings 
+│   └── figures/            # Visualizations generated from analysis
 ├── src/                    # Source code
 │   ├── data/               # Data processing modules
+│   ├── eda/                # Exploratory data analysis scripts
 │   ├── features/           # Feature engineering
 │   ├── models/             # Model code
 │   ├── pipeline/           # Pipeline framework
 │   └── visualization/      # Visualization code
 ├── tests/                  # Test code
-├── visualizations/         # Output visualization files
 ├── .github/                # GitHub configurations
 ├── run_pipeline.py         # Main pipeline execution script
 └── pyproject.toml          # Project configuration and dependencies
@@ -74,7 +76,17 @@ This module handles the loading, cleaning, and transformation of NCAA basketball
 - **Data Format**: Parquet files, loaded using Polars (not Pandas)
 - **Data Years**: 2003-2025 (22+ years of historical data)
 
-### 3.3 Feature Engineering (`src/features/`)
+### 3.3 Exploratory Data Analysis (`src/eda/`)
+
+This module contains scripts for analyzing data and generating insights:
+
+- Python scripts organized by analysis topic (e.g., `regular_vs_tournament_analysis.py`)
+- Each script follows modular structure defined in `src/eda/README.md`
+- Scripts generate markdown reports in `reports/findings/`
+- Visualizations are saved to `reports/figures/`
+- Analysis follows consistent methodology and reporting structure
+
+### 3.4 Feature Engineering (`src/features/`)
 
 Transforms processed data into features for model training:
 
@@ -83,7 +95,7 @@ Transforms processed data into features for model training:
 - Match-up specific features
 - Temporal features (trends, momentum)
 
-### 3.4 Models (`src/models/`)
+### 3.5 Models (`src/models/`)
 
 Implements neural network models for game outcome prediction:
 
@@ -92,7 +104,7 @@ Implements neural network models for game outcome prediction:
 - Evaluation metrics
 - Prediction generation
 
-### 3.5 Visualization (`src/visualization/`)
+### 3.6 Visualization (`src/visualization/`)
 
 Creates visualizations for insights and bracket presentation:
 
@@ -229,7 +241,25 @@ python run_pipeline.py --clean-raw
    - Features are created from processed data
    - Feature data is stored in `data/features/{feature_set}/{year}.parquet`
 
-### 5.3 Model Training Workflow
+### 5.3 EDA Workflow
+
+1. **Script Creation**:
+   - Create a Python script in `src/eda/` for a specific analysis
+   - Follow the structure outlined in `src/eda/README.md`
+   - For detailed guidance on implementing EDA tasks, refer to the comprehensive `docs/eda_guide.md`
+
+2. **Analysis Execution**:
+   - Run the script to analyze data and generate findings
+   ```bash
+   python -m src.eda.script_name
+   ```
+
+3. **Report Generation**:
+   - Script automatically creates a markdown report in `reports/findings/`
+   - Visualizations are saved to `reports/figures/`
+   - Reports follow the template in `reports/findings/README.md`
+
+### 5.4 Model Training Workflow
 
 1. **Data Preparation**:
    - Features are loaded and split into training/validation sets
@@ -243,7 +273,7 @@ python run_pipeline.py --clean-raw
    - Trained models are saved to the `models/` directory
    - Model metadata is stored alongside model weights
 
-### 5.4 Prediction Workflow
+### 5.5 Prediction Workflow
 
 1. **Model Loading**:
    - Trained models are loaded from the `models/` directory
@@ -254,7 +284,7 @@ python run_pipeline.py --clean-raw
 
 3. **Bracket Creation**:
    - Optimal brackets are generated based on predictions
-   - Visualizations are created and saved to `visualizations/`
+   - Visualizations are created and saved to `reports/figures/`
 
 ## 6. Common Pitfalls & Guidelines
 
@@ -266,6 +296,8 @@ python run_pipeline.py --clean-raw
 - Raw data: `data/raw/{category}/{year}.parquet`
 - Processed data: `data/processed/{category}/{year}.parquet`
 - Feature data: `data/features/{feature_set}/{year}.parquet`
+- Analysis reports: `reports/findings/{analysis_name}.md`
+- Visualizations: `reports/figures/{viz_name}.{ext}`
 
 ### 6.2 Data Processing vs. Feature Engineering
 
@@ -305,7 +337,33 @@ def engineer_team_features(processed_data: pl.DataFrame) -> pl.DataFrame:
     ])
 ```
 
-### 6.3 Data Processing
+### 6.3 EDA Scripting Standards
+
+⚠️ **Common Mistake**: Creating one-off analysis scripts without proper structure or documentation
+
+✅ **Correct Approach**:
+- Follow the template in `src/eda/README.md` for all analysis scripts
+- Include functions for loading data, performing analysis, and generating reports
+- Save visualizations with descriptive names to `reports/figures/`
+- Generate comprehensive markdown reports in `reports/findings/`
+
+```python
+# Example EDA script structure
+if __name__ == "__main__":
+    # 1. Load and prepare data
+    data = load_data()
+    
+    # 2. Perform analysis
+    results = analyze_data(data)
+    
+    # 3. Generate visualizations
+    create_visualizations(results)
+    
+    # 4. Generate findings report
+    generate_report(results)
+```
+
+### 6.4 Data Processing
 
 ⚠️ **Common Mistake**: Using Pandas instead of Polars, not handling missing data
 
@@ -326,7 +384,7 @@ data = data.with_columns([
 ])
 ```
 
-### 6.4 Pipeline Integration
+### 6.5 Pipeline Integration
 
 ⚠️ **Common Mistake**: Not following the stage-based pattern or ignoring configuration
 
@@ -335,7 +393,7 @@ data = data.with_columns([
 - Follow the existing logging and error handling patterns
 - Respect configuration-driven behavior
 
-### 6.5 File Paths
+### 6.6 File Paths
 
 ⚠️ **Common Mistake**: Using hardcoded paths or string concatenation
 
@@ -351,7 +409,7 @@ base_dir = Path(config.data.processed_dir)
 file_path = base_dir / category / f"{year}.parquet"
 ```
 
-### 6.6 Error Handling
+### 6.7 Error Handling
 
 ⚠️ **Common Mistake**: Not handling errors or using overly broad except clauses
 
@@ -367,75 +425,118 @@ except Exception as e:
     raise
 ```
 
-## 7. Documentation Organization
+## 7. Code Examples
 
-The project documentation follows a three-part structure designed to serve different user needs:
-
-### 7.1 Documentation Structure
-
-- **User Guide** (`docs/user_guide/`): 
-  - Task-oriented documentation focused on "how to use it"
-  - Contains practical, step-by-step instructions for users
-  - Includes getting started guides, installation instructions, and usage examples
-  - *Contribute here when*: Adding instructions for users on how to perform specific tasks
-
-- **Technical Reference** (`docs/reference/`):
-  - Reference-oriented documentation focused on "how it works"
-  - Contains detailed technical specifications and architecture documentation
-  - Includes data schemas, pipeline architecture details, and API references
-  - *Contribute here when*: Documenting technical details about the system's internal structure
-
-- **Developer Guide** (`docs/developer_guide/`):
-  - Process-oriented documentation focused on "how to contribute"
-  - Contains information for developers extending or modifying the project
-  - Includes code standards, contribution guidelines, and extension examples
-  - *Contribute here when*: Providing guidance for developers contributing to the project
-
-### 7.2 Documentation Guidelines
-
-When creating or updating documentation:
-
-1. **Place content appropriately**:
-   - User-facing instructions → User Guide
-   - Technical specifications → Technical Reference
-   - Development workflows → Developer Guide
-
-2. **Maintain consistent style**:
-   - Use Markdown formatting consistently
-   - Follow the established section hierarchy
-   - Include code examples where applicable
-
-3. **Cross-reference between sections**:
-   - Link to technical reference from user guides when additional details might be helpful
-   - Reference user guides from developer documentation when explaining use cases
-
-4. **Keep documentation synchronized with code**:
-   - Update documentation when making significant code changes
-   - Ensure examples in documentation reflect current API and workflows
-
-When suggesting documentation improvements, identify which section would best house the new content according to this organization.
-
-## 8. Code Examples
-
-### 8.1 Feature Engineering Example
+### 7.1 EDA Script Example
 
 ```python
-def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
+"""
+Regular Season vs Tournament Performance Analysis.
+
+This script analyzes the differences between team performance in 
+regular season games versus tournament games.
+"""
+
+import polars as pl
+from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Dict, Any, Tuple
+
+def load_data() -> Dict[str, pl.DataFrame]:
     """
-    Calculate offensive rating for teams based on points and possessions.
+    Load and prepare team box score data for analysis.
+    
+    Returns:
+        Dictionary containing processed DataFrames
+    """
+    data_dir = Path("data/processed")
+    
+    # Load team box scores
+    team_box = pl.read_parquet(data_dir / "team_box.parquet")
+    
+    # Load schedules to identify tournament games
+    schedules = pl.read_parquet(data_dir / "schedules.parquet")
+    
+    return {"team_box": team_box, "schedules": schedules}
+
+def analyze_data(data: Dict[str, pl.DataFrame]) -> Dict[str, Any]:
+    """
+    Perform analysis comparing regular season and tournament performance.
     
     Args:
-        team_stats: DataFrame with team statistics
+        data: Dictionary containing processed DataFrames
         
     Returns:
-        DataFrame with added offensive_rating column
+        Dictionary containing analysis results
     """
-    return team_stats.with_columns([
-        (pl.col("points") * 100 / pl.col("possessions")).alias("offensive_rating")
-    ])
+    # Implementation of analysis
+    # ...
+    
+    return results
+
+def create_visualizations(results: Dict[str, Any]) -> Dict[str, str]:
+    """
+    Generate visualizations from analysis results.
+    
+    Args:
+        results: Dictionary with analysis results
+        
+    Returns:
+        Dictionary mapping visualization descriptions to file paths
+    """
+    figures_dir = Path("reports/figures")
+    figures_dir.mkdir(exist_ok=True, parents=True)
+    
+    # Example visualization
+    plt.figure(figsize=(10, 6))
+    # Create plot using results...
+    
+    # Save figure
+    fig_path = figures_dir / "regular_vs_tournament_efficiency.png"
+    plt.savefig(fig_path)
+    
+    return {"efficiency_comparison": str(fig_path)}
+
+def generate_report(results: Dict[str, Any], figures: Dict[str, str]) -> None:
+    """
+    Generate a markdown report of findings.
+    
+    Args:
+        results: Dictionary with analysis results
+        figures: Dictionary mapping visualization descriptions to file paths
+    """
+    findings_dir = Path("reports/findings")
+    findings_dir.mkdir(exist_ok=True, parents=True)
+    
+    report_path = findings_dir / "regular_vs_tournament_analysis.md"
+    
+    with open(report_path, "w") as f:
+        f.write("# Regular Season vs Tournament Performance Analysis\n\n")
+        
+        f.write("## Overview\n")
+        f.write("This analysis examines how team performance differs between regular season and tournament games.\n\n")
+        
+        # Write remaining sections using template from reports/findings/README.md
+        # ...
+
+if __name__ == "__main__":
+    # 1. Load and prepare data
+    data = load_data()
+    
+    # 2. Perform analysis
+    results = analyze_data(data)
+    
+    # 3. Generate visualizations
+    figures = create_visualizations(results)
+    
+    # 4. Generate findings report
+    generate_report(results, figures)
+    
+    print("Analysis complete. Report saved to reports/findings/regular_vs_tournament_analysis.md")
 ```
 
-### 8.2 Data Loading Example
+### 7.2 Data Loading Example
 
 ```python
 def load_team_data(year: int, config: Config) -> pl.DataFrame:
@@ -472,54 +573,25 @@ def load_team_data(year: int, config: Config) -> pl.DataFrame:
         raise
 ```
 
-### 8.3 Pipeline Stage Example
+### 7.3 Feature Engineering Example
 
 ```python
-def run_feature_engineering(
-    years: list[int],
-    config: Config,
-    categories: list[str] = None
-) -> bool:
+def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
     """
-    Run the feature engineering stage of the pipeline.
+    Calculate offensive rating for teams based on points and possessions.
     
     Args:
-        years: List of years to process
-        config: Pipeline configuration
-        categories: Optional list of data categories to process
+        team_stats: DataFrame with team statistics
         
     Returns:
-        True if successful, False otherwise
+        DataFrame with added offensive_rating column
     """
-    logger.info(f"Running feature engineering for years: {years}")
-    
-    feature_dir = Path(config.data.feature_dir)
-    feature_dir.mkdir(exist_ok=True, parents=True)
-    
-    # Process each year
-    for year in years:
-        logger.info(f"Processing features for year {year}")
-        
-        try:
-            # Load processed data
-            team_data = load_processed_team_data(year, config)
-            
-            # Engineer features
-            team_features = engineer_team_features(team_data)
-            
-            # Save features
-            output_path = feature_dir / f"team_features_{year}.parquet"
-            team_features.write_parquet(output_path)
-            
-            logger.info(f"Features saved to {output_path}")
-        except Exception as e:
-            logger.exception(f"Error processing features for {year}: {e}")
-            return False
-    
-    return True
+    return team_stats.with_columns([
+        (pl.col("points") * 100 / pl.col("possessions")).alias("offensive_rating")
+    ])
 ```
 
-## 9. Quick Reference
+## 8. Quick Reference
 
 ### Data Sources
 - Repository: sportsdataverse/hoopR-mbb-data
@@ -532,12 +604,13 @@ def run_feature_engineering(
 - Processed data: `data/processed/{category}/{year}.parquet`
 - Features: `data/features/{feature_set}/{year}.parquet`
 - Models: `models/{model_type}/{model_name}.pt`
-- Visualizations: `visualizations/{viz_type}/{viz_name}.{ext}`
+- Analysis reports: `reports/findings/{analysis_name}.md`
+- Visualizations: `reports/figures/{viz_name}.{ext}`
 
 ### Important Libraries
 - Data Processing: `polars` (not pandas)
 - Deep Learning: `torch`
-- Visualization: `plotly`
+- Visualization: `plotly`, `matplotlib`, `seaborn`
 - Configuration: `pyyaml`
 
 ### CLI Commands
@@ -560,4 +633,7 @@ python run_pipeline.py --clean-all  # Clean all data
 
 # Custom configuration
 python run_pipeline.py --config custom_config.yaml
-``` 
+
+# Run EDA script
+python -m src.eda.script_name
+```
