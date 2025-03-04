@@ -246,6 +246,7 @@ python run_pipeline.py --clean-raw
 1. **Script Creation**:
    - Create a Python script in `src/eda/` for a specific analysis
    - Follow the structure outlined in `src/eda/README.md`
+   - For detailed guidance on implementing EDA tasks, refer to the comprehensive `docs/eda_guide.md`
 
 2. **Analysis Execution**:
    - Run the script to analyze data and generate findings
