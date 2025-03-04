@@ -267,7 +267,45 @@ python run_pipeline.py --clean-raw
 - Processed data: `data/processed/{category}/{year}.parquet`
 - Feature data: `data/features/{feature_set}/{year}.parquet`
 
-### 6.2 Data Processing
+### 6.2 Data Processing vs. Feature Engineering
+
+⚠️ **Common Mistake**: Mixing data processing with feature engineering or generating placeholder data during processing
+
+✅ **Correct Approach**:
+- **Data Processing**: Focus only on cleaning, standardizing, and organizing raw data
+  - Only include metrics directly derivable from the raw data
+  - Do not calculate advanced metrics or add synthetic/placeholder values
+  - Store processed data in `data/processed/`
+
+- **Feature Engineering**: Create derived metrics and features in a separate stage
+  - Calculate advanced metrics like efficiency ratings, strength indicators, etc.
+  - Apply transformations like normalization, encoding, etc.
+  - Store engineered features in `data/features/`
+
+```python
+# CORRECT: Clean separation between processing and feature engineering
+
+# Data processing: Clean and standardize raw data
+def process_team_data(team_data: pl.DataFrame) -> pl.DataFrame:
+    """Process team data without adding synthetic values."""
+    return team_data.filter(
+        pl.col("team_id").is_not_null()
+    ).with_columns([
+        pl.col("points").cast(pl.Float64),
+        # Only transformations of existing data, no new metrics calculated
+    ])
+
+# Feature engineering: Calculate advanced metrics
+def engineer_team_features(processed_data: pl.DataFrame) -> pl.DataFrame:
+    """Calculate advanced team metrics as features."""
+    return processed_data.with_columns([
+        # Advanced metrics calculated here
+        (pl.col("points") * 100 / pl.col("possessions")).alias("offensive_efficiency"),
+        (pl.col("assists") / pl.col("field_goals_made")).alias("assist_rate")
+    ])
+```
+
+### 6.3 Data Processing
 
 ⚠️ **Common Mistake**: Using Pandas instead of Polars, not handling missing data
 
@@ -288,7 +326,7 @@ data = data.with_columns([
 ])
 ```
 
-### 6.3 Pipeline Integration
+### 6.4 Pipeline Integration
 
 ⚠️ **Common Mistake**: Not following the stage-based pattern or ignoring configuration
 
@@ -297,7 +335,7 @@ data = data.with_columns([
 - Follow the existing logging and error handling patterns
 - Respect configuration-driven behavior
 
-### 6.4 File Paths
+### 6.5 File Paths
 
 ⚠️ **Common Mistake**: Using hardcoded paths or string concatenation
 
@@ -313,7 +351,7 @@ base_dir = Path(config.data.processed_dir)
 file_path = base_dir / category / f"{year}.parquet"
 ```
 
-### 6.5 Error Handling
+### 6.6 Error Handling
 
 ⚠️ **Common Mistake**: Not handling errors or using overly broad except clauses
 
@@ -329,9 +367,57 @@ except Exception as e:
     raise
 ```
 
-## 7. Code Examples
+## 7. Documentation Organization
 
-### 7.1 Feature Engineering Example
+The project documentation follows a three-part structure designed to serve different user needs:
+
+### 7.1 Documentation Structure
+
+- **User Guide** (`docs/user_guide/`): 
+  - Task-oriented documentation focused on "how to use it"
+  - Contains practical, step-by-step instructions for users
+  - Includes getting started guides, installation instructions, and usage examples
+  - *Contribute here when*: Adding instructions for users on how to perform specific tasks
+
+- **Technical Reference** (`docs/reference/`):
+  - Reference-oriented documentation focused on "how it works"
+  - Contains detailed technical specifications and architecture documentation
+  - Includes data schemas, pipeline architecture details, and API references
+  - *Contribute here when*: Documenting technical details about the system's internal structure
+
+- **Developer Guide** (`docs/developer_guide/`):
+  - Process-oriented documentation focused on "how to contribute"
+  - Contains information for developers extending or modifying the project
+  - Includes code standards, contribution guidelines, and extension examples
+  - *Contribute here when*: Providing guidance for developers contributing to the project
+
+### 7.2 Documentation Guidelines
+
+When creating or updating documentation:
+
+1. **Place content appropriately**:
+   - User-facing instructions → User Guide
+   - Technical specifications → Technical Reference
+   - Development workflows → Developer Guide
+
+2. **Maintain consistent style**:
+   - Use Markdown formatting consistently
+   - Follow the established section hierarchy
+   - Include code examples where applicable
+
+3. **Cross-reference between sections**:
+   - Link to technical reference from user guides when additional details might be helpful
+   - Reference user guides from developer documentation when explaining use cases
+
+4. **Keep documentation synchronized with code**:
+   - Update documentation when making significant code changes
+   - Ensure examples in documentation reflect current API and workflows
+
+When suggesting documentation improvements, identify which section would best house the new content according to this organization.
+
+## 8. Code Examples
+
+### 8.1 Feature Engineering Example
 
 ```python
 def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
@@ -349,7 +435,7 @@ def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
     ])
 ```
 
-### 7.2 Data Loading Example
+### 8.2 Data Loading Example
 
 ```python
 def load_team_data(year: int, config: Config) -> pl.DataFrame:
@@ -386,7 +472,7 @@ def load_team_data(year: int, config: Config) -> pl.DataFrame:
         raise
 ```
 
-### 7.3 Pipeline Stage Example
+### 8.3 Pipeline Stage Example
 
 ```python
 def run_feature_engineering(
@@ -433,7 +519,7 @@ def run_feature_engineering(
     return True
 ```
 
-## 8. Quick Reference
+## 9. Quick Reference
 
 ### Data Sources
 - Repository: sportsdataverse/hoopR-mbb-data
