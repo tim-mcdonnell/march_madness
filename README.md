@@ -56,13 +56,18 @@ ncaa-march-madness-predictor/
 │   ├── raw/                # Original unmodified data
 │   ├── processed/          # Cleaned and transformed data
 │   └── README.md           # Data documentation
-├── notebooks/              # Jupyter notebooks
+├── reports/                # Analysis reports and visualizations 
+│   ├── findings/           # Markdown reports of analysis findings
+│   └── figures/            # Visualizations generated from analysis
 ├── src/                    # Source code
 │   ├── __init__.py
 │   ├── data/               # Data processing modules
 │   │   ├── __init__.py
 │   │   ├── loader.py       # Data loading functions
 │   │   └── cleaner.py      # Data cleaning functions
+│   ├── eda/                # Exploratory data analysis scripts
+│   │   ├── __init__.py
+│   │   └── README.md       # EDA documentation and guidelines
 │   ├── pipeline/           # Pipeline framework
 │   │   ├── __init__.py     # Pipeline package definition
 │   │   ├── cli.py          # Command-line interface
@@ -81,8 +86,6 @@ ncaa-march-madness-predictor/
 │       └── plots.py        # Plotting functions
 ├── models/                 # Saved model files
 │   └── README.md           # Model documentation
-├── visualizations/         # Output visualization files
-│   └── README.md           # Visualization documentation
 ├── tests/                  # Test code
 │   ├── __init__.py
 │   ├── test_data.py
@@ -683,10 +686,12 @@ We use a multi-level testing approach:
    - Test data processing functions
    - Test model utility functions
    - Test visualization helpers
+   - Test EDA script functions
 
-2. **Notebook Validation**: For analysis notebooks
-   - Use [nbval](https://github.com/computationalmodelling/nbval) to validate notebooks
-   - Ensure notebooks run end-to-end without errors
+2. **EDA Script Validation**: For analysis scripts
+   - Validate that EDA scripts run end-to-end without errors
+   - Check that output files (reports and figures) are generated correctly
+   - Ensure consistency in reporting format
 
 3. **Model Evaluation**: For predictive models
    - Cross-validation performance metrics
@@ -700,10 +705,11 @@ We use a multi-level testing approach:
    - Complex algorithms should include inline comments
    - Include type hints where appropriate
 
-2. **Notebook Documentation**
-   - Each notebook should begin with a markdown cell explaining its purpose
-   - Use markdown cells to explain the thought process and conclusions
-   - Include visualizations with interpretations
+2. **EDA Documentation**
+   - Each EDA script should have detailed docstrings explaining its purpose
+   - Scripts should generate structured markdown reports in `reports/findings/`
+   - All visualizations should be saved to `reports/figures/` with clear naming
+   - Reports should follow the template structure in `reports/findings/README.md`
 
 3. **Project Documentation**
    - README files in each directory explaining its purpose
