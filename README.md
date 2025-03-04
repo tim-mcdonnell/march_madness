@@ -94,7 +94,8 @@ ncaa-march-madness-predictor/
 │       ├── badges.yml      # Status badges workflow
 │       └── docs.yml        # Documentation workflow
 └── docs/                   # Additional documentation
-    └── methodology.md      # Detailed methodology documentation
+    ├── methodology.md      # Detailed methodology documentation
+    └── ai_assistant_guide.md # Guide for AI assistants working with this codebase
 ```
 
 ## 🔧 Technology Stack
@@ -308,6 +309,63 @@ Our project requires daily updates during the active NCAA basketball season:
 
 This automated workflow ensures our predictions remain current with the latest available data throughout the season.
 
+## 💻 Development Best Practices
+
+To maintain consistency across the project, please follow these key practices:
+
+### Data Processing
+
+1. **Use Polars, not Pandas**
+   ```python
+   import polars as pl
+   data = pl.read_parquet(file_path)  # ✓
+   # import pandas as pd  # ✗
+   ```
+
+2. **Use pathlib for file paths**
+   ```python
+   from pathlib import Path
+   file_path = Path(config.data.raw_dir) / category / f"{year}.parquet"  # ✓
+   # file_path = config.data.raw_dir + "/" + category + "/" + str(year) + ".parquet"  # ✗
+   ```
+
+3. **Follow data storage conventions**
+   - Raw data: `data/raw/{category}/{year}.parquet`
+   - Processed data: `data/processed/{category}/{year}.parquet`
+   - Features: `data/features/{feature_set}/{year}.parquet`
+
+4. **Use explicit schemas**
+   ```python
+   schema = {"field": pl.Int64, "name": pl.Utf8}
+   df = pl.read_parquet(path, schema=schema)  # ✓
+   # df = pl.read_parquet(path)  # No schema ✗
+   ```
+
+5. **Proper error handling**
+   ```python
+   try:
+       data = pl.read_parquet(file_path)
+   except pl.exceptions.NoDataError:
+       logger.error(f"File contains no data: {file_path}")
+       return None
+   except Exception as e:
+       logger.exception(f"Error loading data from {file_path}: {e}")
+       raise
+   ```
+
+### Common Pitfalls to Avoid
+
+- ❌ Using pandas instead of polars
+- ❌ Hardcoding file paths or using string concatenation
+- ❌ Writing data to incorrect locations
+- ❌ Not following the modular pipeline architecture
+- ❌ Using print instead of proper logging
+- ❌ Ignoring configuration values
+- ❌ Not handling errors properly
+- ❌ Not including type hints
+
+For a more comprehensive guide on working with this codebase, please refer to our [AI Assistant Guide](docs/ai_assistant_guide.md).
+
 ## 🧠 Development Workflow
 
 This project uses a structured workflow optimized for collaboration with AI tools like GitHub Copilot and Cursor AI.
@@ -408,6 +466,7 @@ We use a multi-level testing approach:
    - README files in each directory explaining its purpose
    - Methodology document explaining the overall approach
    - Model cards for trained models describing their performance
+   - [AI Assistant Guide](docs/ai_assistant_guide.md) for AI tools working with this codebase
 
 ## 🔗 Resources
 
