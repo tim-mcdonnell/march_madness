@@ -47,9 +47,11 @@ data/processed/
 *.h5
 *.hdf5
 *.db
-*.sqlite3
 
-# Only exception: keep small example data files and metadata
+
+# Only exception: keep small static data, example data files, and metadata
+!data/static/
+!data/static/*.json
 !data/raw/example/
 !data/raw/*.md
 !data/processed/*.md
