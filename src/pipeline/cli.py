@@ -95,6 +95,12 @@ def create_parser() -> argparse.ArgumentParser:
     )
     
     parser.add_argument(
+        "--no-run", 
+        action="store_true",
+        help="When used with --create-config, exit after creating the configuration without running the pipeline"
+    )
+    
+    parser.add_argument(
         "--log-level", 
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         default="INFO", 

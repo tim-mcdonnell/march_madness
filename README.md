@@ -143,14 +143,14 @@ uv pip install -e .
 
 4. Run the pipeline:
 ```bash
-# Create a default configuration file
-python run_pipeline.py --create-config
-
-# Run the full pipeline
+# Run the full pipeline (automatically creates default config if needed)
 python run_pipeline.py
 
 # Run only the data collection stage
 python run_pipeline.py --stages data
+
+# Create a custom config without running the pipeline (optional)
+python run_pipeline.py --create-config --no-run
 ```
 
 ## 🚚 Pipeline Framework
@@ -220,6 +220,9 @@ python run_pipeline.py --clean-all      # Clean all data
 
 # Use a custom configuration
 python run_pipeline.py --config custom_config.yaml
+
+# Create a config without running the pipeline
+python run_pipeline.py --create-config --no-run
 ```
 
 ### Configuration

@@ -305,6 +305,17 @@ def run_data_stage(config: dict[str, Any]) -> bool:
     """
     logger.info("Starting data collection and cleaning stage")
     
+    # Download the data
+    years = config.get("data", {}).get("years", [])
+    categories = config.get("data", {}).get("categories", [])
+    
+    # Call the run function to download data
+    download_results = run(config, years, categories)
+    
+    if not download_results:
+        logger.error("Data download failed, stopping pipeline")
+        return False
+    
     # Validate downloaded data
     if not validate_downloaded_data(config):
         logger.error("Data validation failed, stopping pipeline")

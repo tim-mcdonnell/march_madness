@@ -7,7 +7,7 @@ This script provides a CLI for selecting pipeline stages, configuring data range
 and setting clean/purge options.
 
 Example usage:
-    # Run the full pipeline
+    # Run the full pipeline (creates default config automatically if needed)
     python run_pipeline.py
     
     # Run only the data collection stage
@@ -21,6 +21,9 @@ Example usage:
     
     # Clean all data and run the full pipeline
     python run_pipeline.py --clean-all
+    
+    # Create a custom config without running the pipeline
+    python run_pipeline.py --create-config --no-run
 """
 
 import logging
@@ -48,27 +51,32 @@ def main() -> int:
     logger.info("NCAA March Madness Prediction Pipeline")
     
     try:
-        # Create default config if requested
+        # Create default config if requested or if it doesn't exist
+        config_path = args.config
+        config_created = False
+        
         if args.create_config:
-            config_path = args.config
             logger.info(f"Creating default configuration at {config_path}")
             create_default_config(config_path)
             logger.info(f"Default configuration created at {config_path}")
+            config_created = True
             
-            if len(sys.argv) == 2 and "--create-config" in sys.argv:
-                # Exit if only --create-config was specified
+            # Exit if user just wants to create config without running
+            if args.no_run:
+                logger.info("Configuration created. Exiting without running pipeline.")
                 return 0
         
         # Load configuration
         try:
-            config = load_config(args.config)
-            logger.info(f"Loaded configuration from {args.config}")
+            config = load_config(config_path)
+            logger.info(f"Loaded configuration from {config_path}")
         except FileNotFoundError:
-            logger.error(f"Configuration file not found: {args.config}")
+            logger.error(f"Configuration file not found: {config_path}")
             logger.info("Creating a default configuration file...")
-            create_default_config(args.config)
-            config = load_config(args.config)
-            logger.info(f"Created and loaded default configuration at {args.config}")
+            create_default_config(config_path)
+            config = load_config(config_path)
+            logger.info(f"Created and loaded default configuration at {config_path}")
+            config_created = True
         
         # Process arguments and run pipeline
         results = process_args(args, config)
