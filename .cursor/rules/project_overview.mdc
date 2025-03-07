@@ -1,0 +1,147 @@
+---
+description: High-level overview of the NCAA March Madness Predictor project, including goals, philosophy, and approach. Essential context for understanding implementation decisions.
+globs: ["*.py", "README.md"]
+alwaysApply: true
+---
+
+# Project Overview - NCAA March Madness Predictor
+
+## Project Mission
+
+The NCAA March Madness Predictor is a data science approach to building optimal March Madness brackets using historical NCAA men's basketball data. The project aims to:
+
+1. Develop a machine learning model that predicts NCAA March Madness tournament outcomes
+2. Analyze 22+ years of historical data to identify key performance indicators
+3. Create a reproducible, data-driven approach to bracket construction that outperforms traditional methods
+4. Generate visualizations and insights to communicate findings effectively
+
+## Key Objectives
+
+- **Data Analysis**: Process and analyze 22 years of NCAA men's basketball data
+- **Feature Engineering**: Identify statistical features that predict tournament success
+- **Modeling**: Develop neural network models for game outcome prediction
+- **Visualization**: Create visualizations to communicate insights and model performance
+- **Bracket Generation**: Generate optimized bracket recommendations
+
+## Data Philosophy
+
+The project maintains a strict separation between data stages:
+
+1. **Raw Data**: Original, unmodified data from the source
+2. **Processed Data**: Cleaned and standardized data, with no derived metrics
+3. **Feature Data**: Engineered features and derived metrics for modeling
+
+This separation ensures clarity and maintains the integrity of the source data.
+
+## Development Approach
+
+The project follows these core principles:
+
+1. **Reproducibility**: All processes are coded, documented, and reproducible
+2. **Modularity**: Components are designed with clear interfaces and separation of concerns
+3. **Extensibility**: The system is designed to be easily extended with new features and models
+4. **Performance**: High-performance libraries (Polars, PyTorch) are used for efficiency
+5. **Documentation**: Comprehensive documentation is maintained at both code and project levels
+
+## Technology Stack
+
+- **Python 3.11+**: Core programming language
+- **uv**: Fast Python package manager and virtual environment tool
+- **Polars**: High-performance DataFrame library for data manipulation
+- **PyTorch**: Deep learning framework for neural network models
+- **Plotly Dash**: Interactive visualization framework
+- **Parquet/PyArrow**: Efficient columnar storage format for data
+- **ruff**: Fast Python linter and formatter
+
+## Data Sources
+
+All data is sourced from the sportsdataverse's hoopR-mbb-data GitHub repository, which provides:
+
+- Play-by-play data
+- Player box scores
+- Game schedules
+- Team box scores
+
+These files are available for seasons 2003 through 2025, providing 22+ years of historical data.
+
+## Pipeline Architecture
+
+The project uses a modular pipeline with distinct stages:
+
+```
+Raw Data → Validation → Processing → Feature Engineering → Model Training → Prediction
+```
+
+Each stage has specific responsibilities and interfaces with the next stage through well-defined data contracts.
+
+## Project Structure
+
+The project follows a well-organized directory structure:
+
+```
+march_madness/
+├── config/                 # Configuration files
+├── data/                   # Data storage
+├── docs/                   # Documentation
+├── models/                 # Saved models
+├── reports/                # Analysis reports and visualizations
+├── src/                    # Source code
+│   ├── data/               # Data processing
+│   ├── eda/                # Exploratory analysis
+│   ├── features/           # Feature engineering
+│   ├── models/             # Model code
+│   ├── pipeline/           # Pipeline framework
+│   └── visualization/      # Visualization
+├── tests/                  # Test code
+└── run_pipeline.py         # Pipeline execution
+```
+
+## Development Workflow
+
+This project uses a structured workflow optimized for collaboration with AI tools:
+
+1. **Define milestones**: High-level goals for project phases
+2. **Break into tasks**: Specific, well-defined tasks linked to milestones
+3. **Implement**: Development of features with quality standards
+4. **Test**: Comprehensive testing of all components
+5. **Document**: Documentation of code, usage, and findings
+6. **Review**: Code review and quality assurance
+7. **Merge**: Integration of completed features
+
+## Code Standards
+
+The project maintains high code quality standards:
+
+- Follow PEP 8 conventions with adjustments specified in `pyproject.toml`
+- Include comprehensive docstrings using Google style
+- Use type hints to improve code readability and IDE support
+- Implement tests for all core functionality
+- Use consistent naming patterns and project organization
+
+## Bracket Optimization Approach
+
+Our approach to bracket optimization involves:
+
+1. **Historical Pattern Analysis**: Identifying patterns in historical tournament results
+2. **Feature Engineering**: Creating features that capture team strength and matchup dynamics
+3. **Game Prediction**: Building models to predict individual game outcomes
+4. **Bracket Simulation**: Simulating the tournament with different bracket configurations
+5. **Optimization**: Selecting optimal brackets based on expected score maximization
+
+## Contributions
+
+When contributing to this project:
+
+1. **Follow Code Standards**: Adhere to the project's coding standards
+2. **Write Tests**: Include tests for all new functionality
+3. **Document**: Add docstrings and update relevant documentation
+4. **Review**: Ensure changes are thoroughly reviewed
+5. **Pipeline Compatibility**: Maintain compatibility with the pipeline architecture
+
+## License
+
+This project is licensed under the MIT License.
+
+## Getting Started
+
+To get started with the project, refer to the main [README.md](README.md) file for installation and usage instructions. 

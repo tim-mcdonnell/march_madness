@@ -1,0 +1,171 @@
+---
+description: Comprehensive checklist and process for preparing code for pull requests. Follow these steps before submitting any PR to ensure code quality, test coverage, and functionality.
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# Pull Request Preparation Guide
+
+## Overview
+
+Before submitting a pull request, all code must pass a rigorous quality assurance process consisting of three essential steps that must be completed in sequence. This document outlines the required process to ensure your code is ready for review and integration.
+
+**Critical**: These steps MUST be completed in order. If any step fails, fix the issues and restart the process from the beginning. Only proceed to the next step when the current step passes completely.
+
+## PR Preparation Checklist
+
+### The Three Essential Steps:
+
+1. [Step 1: Comprehensive Testing](#step-1-comprehensive-testing)
+2. [Step 2: Code Linting](#step-2-code-linting)
+3. [Step 3: End-to-End Validation](#step-3-end-to-end-validation)
+
+## Detailed Process
+
+### Step 1: Comprehensive Testing
+
+Run **ALL** tests using pytest, not just those specific to the feature you're working on. Every test in the project must pass.
+
+```bash
+# Run all tests
+pytest
+
+# If you want a coverage report (optional)
+pytest --cov=src tests/
+```
+
+If any tests fail:
+1. Fix the underlying issues
+2. Run the complete test suite again
+3. Repeat until all tests pass
+
+**Verification**: All tests must pass with output similar to:
+```
+===== XX passed in X.XXs =====
+```
+
+### Step 2: Code Linting
+
+Run the ruff linter on **ALL** code in the codebase, not just the files you modified.
+
+```bash
+# Run ruff linting on all Python files
+ruff check .
+```
+
+**Important guidelines**:
+- Fix all linting issues by improving the code
+- Do NOT add exceptions to ruff rules
+- NEVER add `# noqa` comments to bypass linting
+- After fixing linting issues, re-run **both** testing and linting:
+
+```bash
+# Verify tests still pass after linting fixes
+pytest
+
+# Verify all linting issues are resolved
+ruff check .
+```
+
+**Verification**: Ruff should exit with code 0 with no warnings or errors.
+
+### Step 3: End-to-End Validation
+
+This step has two parts, both of which must succeed:
+
+#### Part A: Run the Pipeline As-Is
+
+```bash
+# Run the full pipeline with existing data
+python run_pipeline.py
+```
+
+Fix any issues encountered and restart the process from Step 1 if needed.
+
+#### Part B: Run the Pipeline with Clean Data
+
+Simulate a fresh environment by purging all data and running the pipeline from scratch:
+
+```bash
+# Purge all data and run pipeline end-to-end
+python run_pipeline.py --clean-all
+```
+
+Fix any issues encountered and return to Step 1 if needed.
+
+**Verification**: Both pipeline runs should complete without errors.
+
+## Final Check Before PR Submission
+
+After completing all three steps, run a final verification to ensure everything still works:
+
+```bash
+# Final test verification
+pytest
+
+# Final lint verification
+ruff check .
+
+# Quick pipeline verification (no need to purge again)
+python run_pipeline.py --stages data features
+```
+
+**All three verifications must pass** before submitting your PR.
+
+## Common Issues and Solutions
+
+### Testing Issues
+
+- **Test failures after linting fixes**: Sometimes fixing lint issues can introduce test failures. Always re-run tests after making any code changes.
+- **Inconsistent test results**: If tests pass sometimes but fail others, look for race conditions or test order dependencies.
+- **Missing test coverage**: If you've added new features, ensure they have corresponding tests.
+
+### Linting Issues
+
+- **Line length errors**: Refactor long lines by breaking expressions into multiple lines
+- **Unused imports**: Remove unused imports completely (don't comment them out)
+- **Naming conventions**: Follow the project's naming conventions consistently
+
+### Pipeline Failures
+
+- **Configuration errors**: Verify configuration files are valid and complete
+- **Data schema changes**: If you've modified data schemas, ensure compatibility with existing pipeline components
+- **Missing dependencies**: Verify all dependencies are correctly installed with `python -m pip install -e ".[dev]"`
+
+## Example PR Preparation Workflow
+
+```bash
+# 1. Ensure your branch is up to date
+git checkout your-feature-branch
+git pull origin main
+git merge main  # Fix any merge conflicts
+
+# 2. STEP 1: Run all tests
+pytest
+# Fix any issues until all tests pass
+
+# 3. STEP 2: Run linting
+ruff check .
+# Fix all linting issues without adding exceptions
+
+# After fixing linting issues, verify tests still pass
+pytest
+ruff check .
+
+# 4. STEP 3: Run pipeline normally
+python run_pipeline.py
+# Fix any issues
+
+# 5. Run pipeline with clean data
+python run_pipeline.py --clean-all
+# Fix any issues
+
+# 6. Final verification
+pytest
+ruff check .
+python run_pipeline.py --stages data features
+
+# 7. If all steps pass, you're ready to create a PR!
+```
+
+Remember: Follow this process for **every** PR without exception. This ensures all code in the main branch meets our quality standards and works correctly in both existing and fresh environments. 

@@ -1,0 +1,350 @@
+---
+description: Standards and patterns for creating visualizations and reports. Reference when creating plots, charts, or data presentations to ensure consistency.
+globs: ["src/visualization/*.py", "src/eda/*.py"]
+alwaysApply: false
+---
+
+# Visualization Standards - NCAA March Madness Predictor
+
+## Visualization Philosophy
+
+Visualizations in this project serve to:
+1. **Communicate Insights**: Clearly present analysis findings 
+2. **Explore Patterns**: Facilitate data exploration and discovery
+3. **Support Decisions**: Provide evidence for prediction strategies
+4. **Document Performance**: Demonstrate model effectiveness
+
+## Visualization Tools
+
+The project uses these visualization libraries:
+
+- **Plotly**: For interactive visualizations and dashboards
+- **Matplotlib**: For static plots in reports
+- **Seaborn**: For statistical visualizations
+- **PyViz/Panel**: For advanced dashboards (when needed)
+
+## Styling Guidelines
+
+All visualizations should follow these styling guidelines:
+
+1. **Color Schemes**
+   - Use the project's color palette defined in `src/visualization/styles.py`
+   - Use colorblind-friendly palettes
+   - Reserve red/green for win/loss distinctions
+
+2. **Typography**
+   - Use sans-serif fonts (Roboto or Arial)
+   - Maintain consistent font sizes across visualizations
+   - Use proper hierarchy (title > axis labels > tick labels)
+
+3. **Layout**
+   - Include descriptive titles that convey the key insight
+   - Label axes clearly with units in parentheses when applicable
+   - Include source data attribution
+
+4. **File Format**
+   - Save static visualizations as PNG files
+   - Save interactive visualizations as HTML
+   - Include both for reporting (PNG in markdown, link to HTML)
+
+## Plotly Standards
+
+When using Plotly, follow these standards:
+
+```python
+import plotly.express as px
+import plotly.graph_objects as go
+from src.visualization.styles import COLOR_PALETTE
+
+# Example: Creating a styled conference win rate visualization
+def create_conference_win_rate_chart(conf_win_rates_df):
+    """
+    Create a bar chart showing conference win rates.
+    
+    Args:
+        conf_win_rates_df (pl.DataFrame): DataFrame with conference win rates
+        
+    Returns:
+        plotly.graph_objects.Figure: Styled figure
+    """
+    # Convert Polars to Pandas for Plotly (required)
+    conf_df_pd = conf_win_rates_df.to_pandas()
+    
+    # Create base visualization
+    fig = px.bar(
+        conf_df_pd, 
+        x='Conference', 
+        y='Win Rate',
+        color='Games',
+        color_continuous_scale=COLOR_PALETTE['sequential'],
+        title='NCAA Tournament Win Rates by Conference (Min. 10 Games)',
+        height=600
+    )
+    
+    # Apply styling
+    fig.update_layout(
+        font_family="Arial",
+        title_font_size=20,
+        xaxis_title_font_size=16,
+        yaxis_title_font_size=16,
+        xaxis_tickangle=-45,
+        margin=dict(l=50, r=50, t=80, b=50),
+        coloraxis_colorbar=dict(title="Games Played"),
+        plot_bgcolor='white',
+        legend_title_font_size=14,
+        hovermode='closest'
+    )
+    
+    # Update axes
+    fig.update_yaxes(
+        tickformat='.0%',  # Format as percentage
+        range=[0, max(conf_df_pd['Win Rate']) * 1.1],  # Add 10% padding
+        gridcolor='lightgray'
+    )
+    
+    return fig
+```
+
+## Matplotlib Standards
+
+When using Matplotlib/Seaborn, follow these standards:
+
+```python
+import matplotlib.pyplot as plt
+import seaborn as sns
+from src.visualization.styles import set_matplotlib_style
+
+# Example: Creating a styled efficiency scatter plot
+def create_efficiency_scatter(team_stats_df):
+    """
+    Create a scatter plot showing offensive vs. defensive efficiency.
+    
+    Args:
+        team_stats_df (pl.DataFrame): DataFrame with team statistics
+        
+    Returns:
+        tuple: Figure and axes objects
+    """
+    # Convert Polars to Pandas for plotting
+    stats_pd = team_stats_df.to_pandas()
+    
+    # Set consistent style
+    set_matplotlib_style()
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 8))
+    
+    # Create scatter plot
+    scatter = sns.scatterplot(
+        data=stats_pd,
+        x='offensive_efficiency', 
+        y='defensive_efficiency',
+        hue='conference',
+        size='win_percentage',
+        sizes=(50, 300),
+        alpha=0.7,
+        ax=ax
+    )
+    
+    # Style plot
+    ax.set_title('Team Efficiency Matrix (Offensive vs. Defensive)', fontsize=16)
+    ax.set_xlabel('Offensive Efficiency (pts per 100 possessions)', fontsize=12)
+    ax.set_ylabel('Defensive Efficiency (pts allowed per 100 possessions)', fontsize=12)
+    ax.grid(color='lightgray', linestyle='--', alpha=0.7)
+    
+    # Add tournament teams indication
+    tournament_teams = stats_pd[stats_pd['tournament_team'] == True]
+    ax.scatter(
+        tournament_teams['offensive_efficiency'],
+        tournament_teams['defensive_efficiency'],
+        s=120, 
+        facecolors='none', 
+        edgecolors='red', 
+        linewidth=2, 
+        label='Tournament Teams'
+    )
+    
+    # Add performance quadrants
+    off_mid = stats_pd['offensive_efficiency'].median()
+    def_mid = stats_pd['defensive_efficiency'].median()
+    ax.axvline(x=off_mid, color='gray', linestyle='--', alpha=0.5)
+    ax.axhline(y=def_mid, color='gray', linestyle='--', alpha=0.5)
+    
+    # Add reference text to quadrants
+    ax.text(stats_pd['offensive_efficiency'].max() * 0.95, def_mid * 0.95, 
+            "Good Offense\nPoor Defense", ha='right', fontsize=10, alpha=0.7)
+    
+    return fig, ax
+```
+
+## Dashboard Standards
+
+For interactive dashboards, use Plotly Dash:
+
+```python
+import dash
+from dash import dcc, html
+import dash_bootstrap_components as dbc
+
+def create_team_comparison_dashboard(team_stats_df):
+    """
+    Create a dashboard for comparing team statistics.
+    
+    Args:
+        team_stats_df (pl.DataFrame): DataFrame with team statistics
+        
+    Returns:
+        dash.Dash: Dashboard application
+    """
+    # Create Dash app
+    app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+    
+    # Define layout
+    app.layout = dbc.Container([
+        # Header
+        dbc.Row([
+            dbc.Col([
+                html.H1("NCAA Team Comparison Dashboard"),
+                html.P("Select teams to compare statistical profiles")
+            ], width=12)
+        ]),
+        
+        # Team selection
+        dbc.Row([
+            dbc.Col([
+                html.Label("Team 1"),
+                dcc.Dropdown(
+                    id="team1-dropdown",
+                    options=[{"label": team, "value": team} 
+                             for team in team_stats_df['team_name'].unique()],
+                    value=team_stats_df['team_name'][0]
+                )
+            ], width=6),
+            dbc.Col([
+                html.Label("Team 2"),
+                dcc.Dropdown(
+                    id="team2-dropdown",
+                    options=[{"label": team, "value": team} 
+                             for team in team_stats_df['team_name'].unique()],
+                    value=team_stats_df['team_name'][1]
+                )
+            ], width=6)
+        ]),
+        
+        # Visualizations go here
+        # ...
+    ])
+    
+    return app
+```
+
+## Report Structure
+
+Visualization reports should follow this structure:
+
+1. **Title**: Clear, descriptive title
+2. **Context**: Brief introduction and context
+3. **Key Insights**: 2-3 bullet points highlighting main takeaways
+4. **Visualization**: The actual chart/graph
+5. **Analysis**: Detailed explanation of what the visualization shows
+6. **Methodology**: Brief description of data source and approach
+7. **Limitations**: Any caveats or limitations to consider
+
+## Common Visualization Types
+
+Use these visualization types for specific purposes:
+
+1. **Distribution Analysis**
+   - Histograms for single variable distributions
+   - Box plots for comparing distributions across categories
+   - Violin plots for showing probability density
+
+2. **Relationship Analysis**
+   - Scatter plots for variable relationships
+   - Heatmaps for correlation matrices
+   - Pair plots for exploring multiple variable relationships
+
+3. **Time Series Analysis**
+   - Line charts for trends over time
+   - Area charts for cumulative metrics
+   - Sparklines for compact trend visualization
+
+4. **Categorical Comparisons**
+   - Bar charts for comparing values across categories
+   - Radar/spider charts for multi-dimensional comparisons
+   - Lollipop charts for ranking with magnitude emphasis
+
+5. **Part-to-Whole Relationships**
+   - Pie charts (use sparingly, for 5 or fewer categories)
+   - Treemaps for hierarchical part-to-whole relationships
+   - Stacked bar charts for comparing composition across categories
+
+## Figure Saving
+
+Always save visualizations to the appropriate location:
+
+```python
+from pathlib import Path
+import os
+
+# Define paths
+FIGURES_DIR = Path("reports") / "figures"
+os.makedirs(FIGURES_DIR, exist_ok=True)
+
+# Save static visualization
+def save_figure(fig, filename, dpi=300):
+    """
+    Save a matplotlib figure to the figures directory.
+    
+    Args:
+        fig: Matplotlib figure object
+        filename: Name for the output file (without path)
+        dpi: Resolution (dots per inch)
+    
+    Returns:
+        str: Path to saved figure
+    """
+    filepath = FIGURES_DIR / filename
+    fig.savefig(filepath, dpi=dpi, bbox_inches='tight')
+    return str(filepath)
+
+# Save Plotly visualization
+def save_plotly_figure(fig, filename, include_static=True):
+    """
+    Save a plotly figure to the figures directory.
+    
+    Args:
+        fig: Plotly figure object
+        filename: Name for the output file (without extension)
+        include_static: Whether to also save a static PNG version
+        
+    Returns:
+        dict: Paths to saved figures
+    """
+    file_paths = {}
+    
+    # Save interactive HTML
+    html_path = FIGURES_DIR / f"{filename}.html"
+    fig.write_html(html_path)
+    file_paths['html'] = str(html_path)
+    
+    # Save static PNG if requested
+    if include_static:
+        png_path = FIGURES_DIR / f"{filename}.png"
+        fig.write_image(png_path)
+        file_paths['png'] = str(png_path)
+        
+    return file_paths
+```
+
+## Troubleshooting Visualizations
+
+If your visualization doesn't look right, check these common issues:
+
+1. **Data Issues**: Check data types and ranges
+2. **Scaling Issues**: Consider log transformations for skewed data
+3. **Overplotting**: Use transparency, jittering, or hexbin plots for dense data
+4. **Color Confusion**: Ensure colorblind-friendly palettes
+5. **Poor Contrast**: Ensure text is readable against backgrounds
+
+Remember: A good visualization tells a clear story at a glance while inviting deeper exploration. 

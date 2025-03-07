@@ -1,0 +1,872 @@
+---
+description: Python coding standards, patterns, and best practices for the NCAA March Madness Predictor. Reference when writing or reviewing code to ensure consistency and quality.
+globs: ["**/*.py"]
+alwaysApply: true
+---
+
+# Python Coding Standards
+
+## Overview
+
+This document outlines the coding standards and best practices for the NCAA March Madness Predictor project. Following these standards ensures:
+
+1. **Consistency**: Code looks and behaves consistently across the codebase
+2. **Readability**: Code is easy to read and understand
+3. **Maintainability**: Code is easy to maintain and extend
+4. **Correctness**: Code is less likely to contain bugs
+5. **Performance**: Code is efficient and follows performance best practices
+
+## Code Style
+
+### General Style Guidelines
+
+- Follow [PEP 8](mdc:https:/peps.python.org/pep-0008) conventions with custom configurations in `pyproject.toml`
+- Use 4 spaces for indentation, not tabs
+- Maximum line length of 100 characters
+- Use `snake_case` for variable names, function names, and method names
+- Use `PascalCase` for class names and type aliases
+- Use `UPPER_CASE` for constants
+- Use `_leading_underscore` for internal/private variables and functions
+
+### Import Formatting
+
+Imports should be grouped and organized as follows:
+
+```python
+# Standard library imports
+import os
+import sys
+from typing import Dict, List, Optional, Union
+
+# Third-party imports
+import numpy as np
+import polars as pl
+import torch
+import plotly.express as px
+from tqdm import tqdm
+
+# Project imports
+from src.data.loader import DataLoader
+from src.features.builder import FeatureBuilder
+from src.models.model import PredictionModel
+```
+
+### Code Organization
+
+Organize code in a logical order:
+
+```python
+"""Module docstring."""
+
+# Imports (grouped as above)
+
+# Constants
+DEFAULT_WINDOW_SIZE = 5
+OUTPUT_DIRECTORY = "data/processed"
+
+# Type definitions
+TeamID = str
+SeasonYear = int
+GameStats = Dict[str, float]
+
+# Classes
+class TeamStatsProcessor:
+    """Class docstring."""
+    
+    def __init__(self, param1, param2):
+        """Initialize the processor."""
+        self.param1 = param1
+        self.param2 = param2
+    
+    def process(self, data):
+        """Process the data."""
+        # Method implementation
+
+# Functions
+def process_season_data(season_data):
+    """Process season data."""
+    # Function implementation
+
+# Main execution (if applicable)
+if __name__ == "__main__":
+    # Code to execute when run as a script
+```
+
+## Docstrings
+
+### Format
+
+Use [Google style docstrings](mdc:https:/google.github.io/styleguide/pyguide.html#38-comments-and-docstrings) for all modules, classes, methods, and functions:
+
+```python
+def calculate_offensive_efficiency(points, possessions):
+    """Calculate offensive efficiency rating.
+    
+    Computes the offensive efficiency as points per 100 possessions,
+    which is a tempo-free measure of offensive performance.
+    
+    Args:
+        points (float): Number of points scored.
+        possessions (float): Number of possessions.
+        
+    Returns:
+        float: Offensive efficiency rating (points per 100 possessions).
+        
+    Raises:
+        ValueError: If possessions is zero or negative.
+    
+    Examples:
+        >>> calculate_offensive_efficiency(75, 70)
+        107.14
+    """
+    if possessions <= 0:
+        raise ValueError("Possessions must be positive")
+    return (points / possessions) * 100
+```
+
+### When to Use Docstrings
+
+- **Always** include docstrings for:
+  - Modules (at the top of each file)
+  - Classes
+  - Public methods and functions
+  
+- **Consider** including docstrings for:
+  - Private methods if their functionality isn't obvious
+  - Complex code blocks within functions
+
+## Type Annotations
+
+### Basic Usage
+
+Use type annotations for function parameters and return values:
+
+```python
+def filter_team_games(games: List[Dict], team_id: str) -> List[Dict]:
+    """Filter games for a specific team."""
+    return [game for game in games if game["team_id"] == team_id]
+```
+
+### Complex Types
+
+Use type aliases for complex types:
+
+```python
+from typing import Dict, List, Optional, TypedDict, Union
+
+# Type aliases
+TeamID = str
+GameID = str
+
+class GameStats(TypedDict):
+    game_id: GameID
+    team_id: TeamID
+    points: int
+    rebounds: int
+    assists: int
+
+TeamGameStats = Dict[TeamID, List[GameStats]]
+
+def get_team_stats(data: List[GameStats], team_id: TeamID) -> Optional[List[GameStats]]:
+    """Get stats for a specific team."""
+    team_games = [game for game in data if game["team_id"] == team_id]
+    return team_games if team_games else None
+```
+
+### Return Types
+
+Always specify return types, including `None` when applicable:
+
+```python
+def save_data(data: pl.DataFrame, path: str) -> None:
+    """Save data to a file."""
+    data.write_parquet(path)
+    
+def get_win_probability(team1_rating: float, team2_rating: float) -> float:
+    """Calculate win probability based on team ratings."""
+    return 1 / (1 + 10 ** ((team2_rating - team1_rating) / 400))
+```
+
+## Error Handling
+
+### Exception Handling
+
+Use specific exception types and provide context:
+
+```python
+def load_team_data(file_path):
+    """Load team data from a file."""
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Team data file not found: {file_path}")
+        
+        return pl.read_parquet(file_path)
+    except pl.exceptions.CompressionError:
+        raise ValueError(f"Invalid Parquet file format: {file_path}")
+    except Exception as e:
+        raise RuntimeError(f"Failed to load team data: {str(e)}") from e
+```
+
+### Custom Exceptions
+
+Use custom exceptions for project-specific errors:
+
+```python
+class DataProcessingError(Exception):
+    """Exception raised for errors in the data processing pipeline."""
+    pass
+
+class FeatureEngineeringError(Exception):
+    """Exception raised for errors in the feature engineering process."""
+    pass
+
+def process_data(data):
+    """Process input data."""
+    if data.is_empty():
+        raise DataProcessingError("Cannot process empty data")
+    # Process data
+```
+
+### Error Messages
+
+Write clear, specific error messages:
+
+- Include values that caused the error
+- Explain what went wrong
+- Suggest a solution if possible
+
+```python
+# Bad
+if value < 0:
+    raise ValueError("Invalid value")
+
+# Good
+if value < 0:
+    raise ValueError(f"Value must be non-negative, got {value}")
+```
+
+## Performance Considerations
+
+### Use Vectorized Operations
+
+Prefer vectorized operations over loops:
+
+```python
+# Bad
+result = []
+for i in range(len(team_stats)):
+    result.append(team_stats[i]["points"] / team_stats[i]["possessions"] * 100)
+
+# Good
+points = pl.col("points")
+possessions = pl.col("possessions")
+offensive_rating = (points / possessions * 100).alias("offensive_rating")
+```
+
+### Use Lazy Evaluation
+
+Use lazy evaluation for complex operations:
+
+```python
+# Build operations lazily
+query = (
+    df.lazy()
+    .filter(pl.col("season") >= 2015)
+    .with_columns([
+        (pl.col("points") / pl.col("possessions") * 100).alias("offensive_rating")
+    ])
+    .groupby("team_id")
+    .agg([
+        pl.col("offensive_rating").mean().alias("avg_offensive_rating")
+    ])
+)
+
+# Execute only when needed
+result = query.collect()
+```
+
+### Profile and Optimize
+
+Profile code to identify bottlenecks:
+
+```python
+import cProfile
+import pstats
+
+def profile_function(func, *args, **kwargs):
+    """Profile a function's execution."""
+    profiler = cProfile.Profile()
+    profiler.enable()
+    result = func(*args, **kwargs)
+    profiler.disable()
+    
+    stats = pstats.Stats(profiler).sort_stats('cumulative')
+    stats.print_stats(20)  # Print top 20 functions by cumulative time
+    
+    return result
+
+# Usage
+profile_function(process_all_seasons, seasons=[2015, 2016, 2017, 2018])
+```
+
+## Testing Standards
+
+### Test File Organization
+
+- Place tests in the `tests/` directory
+- Mirror the package structure in the test directory
+- Name test files with `test_` prefix
+
+```
+src/
+└── features/
+    └── builder.py
+tests/
+└── features/
+    └── test_builder.py
+```
+
+### Test Function Naming
+
+Name test functions descriptively:
+
+```python
+# test_builder.py
+
+def test_offensive_efficiency_calculation():
+    """Test that offensive efficiency is calculated correctly."""
+    # Test implementation
+
+def test_feature_builder_handles_missing_data():
+    """Test that FeatureBuilder handles missing data correctly."""
+    # Test implementation
+
+def test_team_stats_aggregation_with_empty_input():
+    """Test that team stats aggregation handles empty input."""
+    # Test implementation
+```
+
+### Assertion Style
+
+Use `assert` statements with clear messages:
+
+```python
+def test_offensive_efficiency_calculation():
+    """Test that offensive efficiency is calculated correctly."""
+    # Given
+    points = 75
+    possessions = 70
+    expected_efficiency = 107.14
+    
+    # When
+    efficiency = calculate_offensive_efficiency(points, possessions)
+    
+    # Then
+    assert abs(efficiency - expected_efficiency) < 0.01, \
+        f"Expected efficiency {expected_efficiency}, got {efficiency}"
+```
+
+### Test Coverage
+
+Aim for high test coverage:
+
+- Test all public functions and methods
+- Include edge cases and error conditions
+- Test with realistic data samples
+
+## Code Organization and Project Structure
+
+### Module Organization
+
+Organize code into logical modules:
+
+```
+src/
+├── data/                 # Data loading and processing
+│   ├── __init__.py
+│   ├── loader.py
+│   ├── processor.py
+│   └── schemas.py
+├── features/             # Feature engineering
+│   ├── __init__.py
+│   ├── builder.py
+│   └── selectors.py
+├── models/               # Model definitions
+│   ├── __init__.py
+│   ├── base.py
+│   ├── lstm.py
+│   └── transformer.py
+└── visualization/        # Visualization utilities
+    ├── __init__.py
+    ├── plots.py
+    └── dashboards.py
+```
+
+### Single Responsibility Principle
+
+Each module, class, and function should have a single responsibility:
+
+```python
+# Bad: Class doing too much
+class TeamAnalyzer:
+    def load_data(self, file_path):
+        # Data loading code
+    
+    def process_data(self, data):
+        # Data processing code
+    
+    def calculate_features(self, data):
+        # Feature calculation code
+    
+    def train_model(self, features):
+        # Model training code
+
+# Good: Separate classes with single responsibilities
+class DataLoader:
+    def load_team_data(self, file_path):
+        # Data loading code
+
+class DataProcessor:
+    def process_team_data(self, data):
+        # Data processing code
+
+class FeatureCalculator:
+    def calculate_team_features(self, data):
+        # Feature calculation code
+
+class ModelTrainer:
+    def train_prediction_model(self, features):
+        # Model training code
+```
+
+### Factory Pattern
+
+Use factory patterns for component creation:
+
+```python
+# models/factory.py
+def create_model(model_type, config):
+    """Create a model based on type and configuration."""
+    if model_type == "lstm":
+        from src.models.lstm import LSTMModel
+        return LSTMModel(**config)
+    elif model_type == "transformer":
+        from src.models.transformer import TransformerModel
+        return TransformerModel(**config)
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+```
+
+## Common Anti-Patterns to Avoid
+
+### Global State
+
+Avoid using global variables:
+
+```python
+# Bad: Using global variables
+DATA_PATH = "data/processed/"
+def load_data():
+    global DATA_PATH
+    return pl.read_parquet(DATA_PATH + "team_stats.parquet")
+
+# Good: Pass dependencies explicitly
+def load_data(data_path):
+    return pl.read_parquet(data_path + "team_stats.parquet")
+```
+
+### Magic Numbers
+
+Avoid using magic numbers without explanation:
+
+```python
+# Bad: Magic numbers
+def calculate_expected_wins(rating):
+    return (rating - 1500) / 100  # Why 1500? Why divide by 100?
+
+# Good: Constants with clear names
+BASE_RATING = 1500  # Average team rating
+RATING_TO_WINS_FACTOR = 100  # Each 100 rating points = 1 expected win
+
+def calculate_expected_wins(rating):
+    """Calculate expected wins above average based on rating."""
+    return (rating - BASE_RATING) / RATING_TO_WINS_FACTOR
+```
+
+### Deeply Nested Code
+
+Avoid deeply nested code:
+
+```python
+# Bad: Deep nesting
+def process_teams(teams):
+    results = {}
+    for team in teams:
+        if team.active:
+            if len(team.games) > 0:
+                stats = {}
+                for game in team.games:
+                    if game.complete:
+                        # Process game stats
+                        pass
+                results[team.id] = stats
+    return results
+
+# Good: Early returns and helper functions
+def process_teams(teams):
+    """Process team statistics."""
+    results = {}
+    for team in teams:
+        team_stats = process_team(team)
+        if team_stats:
+            results[team.id] = team_stats
+    return results
+
+def process_team(team):
+    """Process statistics for a single team."""
+    if not team.active or not team.games:
+        return None
+    
+    return process_team_games(team.games)
+
+def process_team_games(games):
+    """Process statistics for team games."""
+    stats = {}
+    for game in games:
+        if game.complete:
+            update_stats_with_game(stats, game)
+    return stats
+```
+
+### Inconsistent Return Types
+
+Avoid functions that return different types:
+
+```python
+# Bad: Inconsistent return types
+def get_team_info(team_id):
+    if team_id in database:
+        return database[team_id]  # Returns dict
+    else:
+        return None  # Returns None
+
+# Good: Consistent return types with Optional
+def get_team_info(team_id) -> Optional[Dict]:
+    """Get team information from database."""
+    return database.get(team_id)  # Always returns Dict or None
+```
+
+## Logging Standards
+
+### Basic Configuration
+
+Use the standard logging module with appropriate configuration:
+
+```python
+import logging
+
+# Configure logging at module level
+logger = logging.getLogger(__name__)
+
+def process_data(data):
+    """Process input data."""
+    logger.info(f"Processing data with {len(data)} records")
+    try:
+        result = perform_processing(data)
+        logger.info(f"Processing complete, generated {len(result)} results")
+        return result
+    except Exception as e:
+        logger.error(f"Error processing data: {str(e)}", exc_info=True)
+        raise
+```
+
+### Log Levels
+
+Use appropriate log levels:
+
+- **DEBUG**: Detailed information for debugging
+- **INFO**: Confirmation that things are working as expected
+- **WARNING**: An indication that something unexpected happened
+- **ERROR**: A more serious problem that prevented an operation
+- **CRITICAL**: A very serious error that might prevent the program from continuing
+
+```python
+# Debug information
+logger.debug(f"Processing file {file_path} with options {options}")
+
+# Info for normal operation tracking
+logger.info(f"Successfully processed {len(records)} records")
+
+# Warning for unexpected but non-fatal issues
+logger.warning(f"Missing data for {team_id}, using defaults")
+
+# Error for serious issues
+logger.error(f"Failed to load data file {file_path}", exc_info=True)
+
+# Critical for fatal issues
+logger.critical("Database connection failed, shutting down", exc_info=True)
+```
+
+## Code Examples
+
+### Data Processing Example
+
+```python
+import logging
+from pathlib import Path
+from typing import Dict, List, Optional
+
+import polars as pl
+
+logger = logging.getLogger(__name__)
+
+def load_team_box_scores(file_path: str) -> Optional[pl.DataFrame]:
+    """Load team box scores from a CSV file.
+    
+    Args:
+        file_path: Path to the CSV file containing team box scores.
+        
+    Returns:
+        DataFrame containing team box scores or None if file doesn't exist.
+        
+    Raises:
+        ValueError: If the file exists but has invalid format.
+    """
+    file_path = Path(file_path)
+    if not file_path.exists():
+        logger.warning(f"Team box score file not found: {file_path}")
+        return None
+    
+    logger.info(f"Loading team box scores from {file_path}")
+    try:
+        df = pl.read_csv(file_path)
+        logger.info(f"Loaded {df.height} team box score records")
+        return df
+    except Exception as e:
+        logger.error(f"Failed to load team box scores: {str(e)}", exc_info=True)
+        raise ValueError(f"Invalid team box score file format: {str(e)}") from e
+
+def clean_team_box_scores(df: pl.DataFrame) -> pl.DataFrame:
+    """Clean team box score data.
+    
+    Performs the following cleaning operations:
+    - Converts column names to snake_case
+    - Ensures numeric columns have correct types
+    - Handles missing values
+    - Calculates additional statistics
+    
+    Args:
+        df: DataFrame containing raw team box scores.
+        
+    Returns:
+        Cleaned DataFrame with consistent formatting.
+    """
+    logger.info("Cleaning team box score data")
+    
+    # Convert column names to snake_case
+    df = df.rename({col: col.lower().replace(" ", "_") for col in df.columns})
+    
+    # Ensure numeric columns have correct types
+    numeric_cols = ["pts", "fg", "fg_attempts", "ft", "ft_attempts", 
+                   "rebounds", "assists", "steals", "blocks", "turnovers"]
+    
+    for col in numeric_cols:
+        if col in df.columns:
+            df = df.with_columns(pl.col(col).cast(pl.Float64, strict=False))
+    
+    # Handle missing values
+    df = df.fill_null(0, subset=numeric_cols)
+    
+    # Calculate additional statistics
+    if all(c in df.columns for c in ["fg", "fg_attempts"]):
+        df = df.with_columns(
+            (pl.col("fg") / pl.col("fg_attempts")).alias("fg_pct")
+        )
+    
+    logger.info("Team box score data cleaned successfully")
+    return df
+
+def process_team_box_scores(input_path: str, output_path: str) -> None:
+    """Process team box scores from raw data to cleaned data.
+    
+    Args:
+        input_path: Path to the raw team box score file.
+        output_path: Path where processed data should be saved.
+        
+    Returns:
+        None
+    """
+    # Load data
+    df = load_team_box_scores(input_path)
+    if df is None:
+        logger.error(f"Cannot process team box scores: input file not found")
+        return
+    
+    # Clean data
+    cleaned_df = clean_team_box_scores(df)
+    
+    # Save processed data
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    logger.info(f"Saving processed team box scores to {output_path}")
+    cleaned_df.write_parquet(output_path)
+    logger.info(f"Saved {cleaned_df.height} processed team box score records")
+```
+
+### Feature Engineering Example
+
+```python
+from typing import Dict, List, Optional, Union
+import logging
+
+import polars as pl
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+class TeamEfficiencyFeatureBuilder:
+    """Builder for team efficiency features.
+    
+    Creates features based on offensive and defensive efficiency metrics.
+    """
+    
+    def __init__(self, window_size: int = 5):
+        """Initialize the builder.
+        
+        Args:
+            window_size: Number of games to use for rolling averages.
+        """
+        self.window_size = window_size
+        logger.info(f"Initialized TeamEfficiencyFeatureBuilder with window_size={window_size}")
+    
+    def build_features(self, team_stats: pl.DataFrame) -> pl.DataFrame:
+        """Build team efficiency features.
+        
+        Args:
+            team_stats: DataFrame containing team game stats.
+                Expected columns: team_id, season, game_id, points, possessions,
+                opp_points, opp_possessions
+                
+        Returns:
+            DataFrame containing efficiency features.
+        """
+        logger.info(f"Building efficiency features for {team_stats.height} team game records")
+        
+        # Validate input
+        required_cols = ["team_id", "season", "game_id", "points", "possessions", 
+                         "opp_points", "opp_possessions"]
+        missing_cols = [col for col in required_cols if col not in team_stats.columns]
+        
+        if missing_cols:
+            error_msg = f"Missing required columns: {missing_cols}"
+            logger.error(error_msg)
+            raise ValueError(error_msg)
+        
+        # Calculate basic efficiency metrics
+        features = team_stats.with_columns([
+            (pl.col("points") / pl.col("possessions") * 100).alias("offensive_rating"),
+            (pl.col("opp_points") / pl.col("opp_possessions") * 100).alias("defensive_rating"),
+            (pl.col("points") - pl.col("opp_points")).alias("point_differential")
+        ])
+        
+        # Group by team and season, then sort by game_id for proper ordering
+        features = features.sort(["team_id", "season", "game_id"])
+        
+        # Calculate rolling averages
+        features = self._calculate_rolling_averages(features)
+        
+        logger.info(f"Built {features.width - len(required_cols)} efficiency features")
+        return features
+    
+    def _calculate_rolling_averages(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Calculate rolling averages for efficiency metrics.
+        
+        Args:
+            df: DataFrame with basic efficiency metrics.
+            
+        Returns:
+            DataFrame with added rolling average features.
+        """
+        # This is a simplified implementation - in practice, we'd use more sophisticated
+        # methods to handle the rolling window by team and season
+        
+        # Create a list to store DataFrames for each team-season combination
+        result_dfs = []
+        
+        # Process each team-season combination separately
+        for team_id in df["team_id"].unique():
+            team_df = df.filter(pl.col("team_id") == team_id)
+            
+            for season in team_df["season"].unique():
+                # Get games for this team and season
+                season_df = team_df.filter(pl.col("season") == season)
+                
+                # Skip if not enough games
+                if season_df.height < 2:
+                    result_dfs.append(season_df)
+                    continue
+                
+                # Calculate rolling averages
+                rolling_columns = []
+                
+                for metric in ["offensive_rating", "defensive_rating", "point_differential"]:
+                    values = season_df[metric].to_numpy()
+                    rolling_avg = self._compute_rolling_average(values, self.window_size)
+                    
+                    # Create a new column with the rolling average
+                    season_df = season_df.with_columns(
+                        pl.Series(name=f"rolling_{metric}", values=rolling_avg)
+                    )
+                
+                result_dfs.append(season_df)
+        
+        # Combine all processed DataFrames
+        if result_dfs:
+            return pl.concat(result_dfs)
+        return df
+    
+    def _compute_rolling_average(self, values: np.ndarray, window: int) -> np.ndarray:
+        """Compute rolling average with proper handling of initial values.
+        
+        Args:
+            values: Array of values to compute rolling average for.
+            window: Window size.
+            
+        Returns:
+            Array of rolling averages.
+        """
+        n = len(values)
+        result = np.zeros(n)
+        
+        for i in range(n):
+            # For the first few elements, use as many as are available
+            start_idx = max(0, i - window + 1)
+            # Calculate average of available values
+            result[i] = values[start_idx:i+1].mean()
+            
+        return result
+```
+
+## Code Review Checklist
+
+When reviewing code, check for:
+
+- [ ] Adherence to style guidelines
+- [ ] Comprehensive docstrings
+- [ ] Proper type annotations
+- [ ] Appropriate error handling
+- [ ] Performance considerations
+- [ ] Test coverage
+- [ ] Single responsibility principle
+- [ ] Absence of anti-patterns
+- [ ] Proper logging
+- [ ] Code clarity and readability
+
+## Additional Resources
+
+- [PEP 8 Style Guide](mdc:https:/peps.python.org/pep-0008)
+- [Google Python Style Guide](mdc:https:/google.github.io/styleguide/pyguide.html)
+- [Type hints cheat sheet](mdc:https:/mypy.readthedocs.io/en/stable/cheat_sheet_py3.html)
+- [Effective Python: 90 Specific Ways to Write Better Python](mdc:https:/effectivepython.com)
+- [Clean Code in Python](mdc:https:/www.packtpub.com/product/clean-code-in-python/9781788835831) 

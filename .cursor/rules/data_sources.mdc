@@ -1,0 +1,211 @@
+---
+description: Data sources, processing principles, and extension patterns for the NCAA March Madness Predictor. Reference when working with data or implementing new data sources.
+globs: ["src/data/*.py"]
+alwaysApply: false
+---
+
+# Data Sources - NCAA March Madness Predictor
+
+## Primary Data Sources
+
+The project uses data exclusively from the sportsdataverse's hoopR-mbb-data repository:
+
+- **Repository**: `sportsdataverse/hoopR-mbb-data`
+- **URL Pattern**: `https://github.com/sportsdataverse/hoopR-mbb-data/raw/refs/heads/main/mbb/{category}/parquet/{filename}_{YEAR}.parquet`
+- **Years**: 2003-2025 (22+ years of historical data)
+
+## Data Categories
+
+The following data categories are used:
+
+1. **play_by_play**: Detailed play-by-play data for each game
+2. **player_box**: Player-level box score statistics
+3. **schedules**: Game schedules and results
+4. **team_box**: Team-level box score statistics
+
+## Data Processing Principles
+
+This project maintains a strict separation between data processing and feature engineering:
+
+1. **Data Processing** (`data/processed/`):
+   - Focuses only on cleaning, standardizing, and organizing raw data
+   - Removes duplicates, fixes data types, standardizes column names
+   - Only contains metrics directly derivable from the source data
+   - Does NOT add synthetic values, placeholders, or calculated metrics
+
+2. **Feature Engineering** (`data/features/`):
+   - Creates new derived metrics (efficiency ratings, factors, etc.)
+   - Applies transformations like normalization and encoding
+   - Generates features specifically for model training
+
+## Data Storage Locations
+
+- Raw data: `data/raw/{category}/{year}.parquet`
+- Processed data: `data/processed/{category}/{year}.parquet`
+- Feature data: `data/features/{feature_set}/{year}.parquet`
+
+## Files in Processed Directory
+
+The processed directory contains standardized versions of the raw data files:
+
+- `play_by_play.parquet` - Cleaned and standardized play-by-play data
+- `player_box.parquet` - Cleaned and standardized player statistics
+- `schedules.parquet` - Cleaned and standardized game schedules
+- `team_box.parquet` - Cleaned and standardized team statistics
+- `team_season_statistics.parquet` - Season-aggregated team statistics
+
+## Adding a New Data Source
+
+To add a new data source to the pipeline:
+
+1. **Update the Loader**
+
+   Modify `src/data/loader.py` to include your new data source:
+
+   ```python
+   def download_new_data_source(season=None, force_download=False):
+       """Download data from the new source.
+       
+       Args:
+           season: Optional season to download (int or list of ints)
+           force_download: Whether to force download even if files exist
+           
+       Returns:
+           List of downloaded file paths
+       """
+       # Implementation for downloading from new source
+       # ...
+       
+       return downloaded_files
+   ```
+
+2. **Create a Schema**
+
+   Define a schema for the new data in `src/data/schema.py`:
+
+   ```python
+   NEW_DATA_SCHEMA = {
+       "core_columns": {
+           "id": pl.Int64,
+           "date": pl.Date,
+           # Other required columns
+       },
+       "optional_columns": {
+           "additional_field": pl.Utf8,
+           # Other optional columns
+       }
+   }
+   ```
+
+3. **Add Validation**
+
+   Extend the validation in `src/data/validation.py`:
+
+   ```python
+   def validate_new_data_source(file_path):
+       """Validate the new data source file.
+       
+       Args:
+           file_path: Path to the file to validate
+           
+       Returns:
+           ValidationResult with success flag and messages
+       """
+       return validate_file_against_schema(file_path, schema.NEW_DATA_SCHEMA)
+   ```
+
+4. **Implement Cleaning**
+
+   Add cleaning functions in `src/data/cleaner.py`:
+
+   ```python
+   def clean_new_data_source(df):
+       """Clean the new data source.
+       
+       Args:
+           df: DataFrame to clean
+           
+       Returns:
+           Cleaned DataFrame
+       """
+       # Apply standard cleaning procedures
+       df = handle_missing_values(df)
+       df = detect_and_handle_outliers(df)
+       
+       # Apply source-specific cleaning
+       # ...
+       
+       return df
+   ```
+
+5. **Implement Processing**
+
+   Add transformation logic in `src/data/transformer.py`:
+
+   ```python
+   def process_new_data_source(df):
+       """Process the new data source.
+       
+       Args:
+           df: DataFrame to process
+           
+       Returns:
+           Processed DataFrame
+       """
+       # Standardize columns
+       df = standardize_column_names(df)
+       
+       # Apply specific transformations
+       # ...
+       
+       return df
+   ```
+
+6. **Update the Pipeline**
+
+   Modify `src/pipeline/data.py` to include your new data source.
+
+## Adding a New Cleaning Method
+
+To add a new cleaning method:
+
+1. **Implement the Cleaning Function**
+
+   Add a new function to `src/data/cleaner.py`:
+
+   ```python
+   def new_cleaning_method(df, columns=None, params=None):
+       """Apply new cleaning method to the data.
+       
+       Args:
+           df: DataFrame to clean
+           columns: List of columns to apply cleaning to (or None for all)
+           params: Parameters for the cleaning method
+           
+       Returns:
+           Cleaned DataFrame
+       """
+       # Implementation of the new cleaning method
+       # ...
+       
+       return cleaned_df
+   ```
+
+2. **Integrate with Existing Cleaning Flows**
+
+   Update the relevant cleaning functions to use your new method.
+
+## Data Processing Standards
+
+- **USE POLARS, NOT PANDAS** - This is critical!
+- Use explicit schemas for all DataFrames
+- Use Path objects from pathlib for file paths
+- Handle errors with informative messages
+
+## Common Pitfalls to Avoid
+
+- ⚠️ Using Pandas instead of Polars
+- ⚠️ Writing data to incorrect locations
+- ⚠️ Mixing data processing with feature engineering
+- ⚠️ Using hardcoded file paths
+- ⚠️ Not handling missing values explicitly 

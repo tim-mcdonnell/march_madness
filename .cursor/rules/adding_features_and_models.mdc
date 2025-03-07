@@ -1,0 +1,268 @@
+---
+description: Step-by-step guide for extending the NCAA March Madness Predictor with new feature sets and prediction models. Essential reference for implementing new features or models.
+globs: ["src/features/*.py", "src/models/*.py"]
+alwaysApply: false
+---
+
+# Adding Features and Models - NCAA March Madness Predictor
+
+## Adding a New Feature Set
+
+To add a new feature set:
+
+1. **Create a new file in `src/features/builders/`**:
+
+```python
+# src/features/builders/my_feature_set.py
+from src.features.base import BaseFeatureBuilder
+import polars as pl
+
+class MyFeatureBuilder(BaseFeatureBuilder):
+    """Custom feature builder for my features."""
+    
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.name = "my_features"
+        
+    def build_features(self, team_data, schedules, team_box):
+        """Build custom features.
+        
+        Args:
+            team_data: Team season statistics
+            schedules: Game schedules
+            team_box: Team box scores
+            
+        Returns:
+            DataFrame with new features
+        """
+        # Implement your feature engineering logic here
+        features = team_data.clone()
+        
+        # Example: Add a custom feature
+        features = features.with_columns(
+            pl.col("points_per_game").divide(pl.col("points_allowed_per_game")).alias("scoring_ratio")
+        )
+        
+        return features
+```
+
+2. **Register your feature set in `src/features/factory.py`**:
+
+```python
+# Add to the import section
+from src.features.builders.my_feature_set import MyFeatureBuilder
+
+# Add to the FEATURE_BUILDERS dictionary
+FEATURE_BUILDERS = {
+    "basic": BasicFeatureBuilder,
+    "advanced": AdvancedFeatureBuilder,
+    # ... existing feature builders
+    "my_features": MyFeatureBuilder,  # Add your feature builder
+}
+```
+
+3. **Update the configuration** to include your feature set:
+
+```yaml
+features:
+  sets: ["basic", "advanced", "my_features"]  # Add your feature set
+```
+
+## Feature Engineering Best Practices
+
+1. **Feature Naming**
+   - Use clear, descriptive names
+   - Prefix features with their category (e.g., `off_` for offensive stats)
+   - Include units if relevant (e.g., `points_per_game`)
+
+2. **Feature Organization**
+   - Group related features into their own feature sets
+   - Start with simple features before creating complex ones
+   - Don't combine unrelated features in the same set
+
+3. **Data Transformation**
+   - Standardize features to comparable scales when needed
+   - Handle missing values explicitly (imputation or filtering)
+   - Document any assumptions made during transformation
+
+4. **Performance Considerations**
+   - Use vectorized operations for efficiency
+   - Leverage Polars' lazy execution for complex transformations
+   - Profile and optimize slow feature calculations
+
+## Implementing a New Model
+
+To add a new prediction model:
+
+1. **Create a new file in `src/models/`**:
+
+```python
+# src/models/my_model.py
+from src.models.base import BaseModel
+import numpy as np
+from sklearn.base import BaseEstimator, ClassifierMixin
+
+class MyModel(BaseModel):
+    """Custom prediction model."""
+    
+    def __init__(self, config=None):
+        super().__init__(config)
+        self.name = "my_model"
+        self.model = MyCustomClassifier()  # Your custom model implementation
+        
+    def train(self, X, y):
+        """Train the model.
+        
+        Args:
+            X: Feature matrix
+            y: Target values
+        """
+        self.model.fit(X, y)
+        
+    def predict(self, X):
+        """Make predictions.
+        
+        Args:
+            X: Feature matrix
+            
+        Returns:
+            Array of predictions
+        """
+        return self.model.predict(X)
+        
+    def predict_proba(self, X):
+        """Predict probabilities.
+        
+        Args:
+            X: Feature matrix
+            
+        Returns:
+            Array of probability predictions
+        """
+        return self.model.predict_proba(X)
+
+
+# Example custom classifier implementation
+class MyCustomClassifier(BaseEstimator, ClassifierMixin):
+    """Custom classifier implementation."""
+    
+    def __init__(self, param1=1.0, param2="value"):
+        self.param1 = param1
+        self.param2 = param2
+        
+    def fit(self, X, y):
+        # Implement training logic
+        return self
+        
+    def predict(self, X):
+        # Implement prediction logic
+        return np.array([0, 1, 0])  # Replace with actual implementation
+        
+    def predict_proba(self, X):
+        # Implement probability prediction
+        return np.array([[0.7, 0.3], [0.4, 0.6], [0.8, 0.2]])  # Replace with actual implementation
+```
+
+2. **Register your model in `src/models/__init__.py`**:
+
+```python
+from src.models.lgbm import LGBMModel
+from src.models.nn import NeuralNetworkModel
+from src.models.ensemble import EnsembleModel
+from src.models.my_model import MyModel  # Import your model
+
+MODEL_REGISTRY = {
+    "lgbm": LGBMModel,
+    "nn": NeuralNetworkModel,
+    "ensemble": EnsembleModel,
+    "my_model": MyModel,  # Register your model
+}
+```
+
+3. **Update the configuration** to use your model:
+
+```yaml
+model:
+  type: "my_model"
+  # Add any model-specific parameters
+  param1: 2.0
+  param2: "custom_value"
+```
+
+## Model Development Best Practices
+
+1. **Inherit from BaseModel**
+   - Ensures consistent interface
+   - Provides default implementations for common methods
+   - Allows easy integration with the pipeline
+
+2. **Configuration Management**
+   - Make model hyperparameters configurable
+   - Set reasonable defaults for all parameters
+   - Document the effect of each parameter
+
+3. **Evaluation and Metrics**
+   - Include methods for model evaluation
+   - Implement standard metrics (accuracy, precision, recall, etc.)
+   - Add domain-specific metrics where appropriate
+
+4. **Model Persistence**
+   - Implement save/load methods
+   - Store model metadata alongside model weights
+   - Version models appropriately
+
+## Example: Team Strength Metrics
+
+Here's an example of adding team strength metrics to the pipeline:
+
+```python
+# In src/features/builders/strength_metrics.py
+
+def calculate_team_strength_metrics(df):
+    """Calculate additional team strength metrics.
+    
+    Args:
+        df: Team box score DataFrame
+        
+    Returns:
+        DataFrame with added strength metrics
+    """
+    # Calculate point differential
+    df = df.with_columns([
+        (pl.col("points") - pl.col("opponent_points")).alias("point_differential")
+    ])
+    
+    # Calculate shooting efficiency
+    df = df.with_columns([
+        (pl.col("points") / pl.col("field_goals_attempted")).alias("points_per_shot")
+    ])
+    
+    return df
+```
+
+## Best Practices for Extension
+
+1. **Follow Existing Patterns**
+   - Study existing feature builders and models
+   - Maintain consistent interfaces and naming conventions
+   - Ensure your extensions work with the pipeline architecture
+
+2. **Document Your Extensions**
+   - Include detailed docstrings
+   - Explain the purpose and implementation details
+   - Document parameters and return values
+
+3. **Write Tests**
+   - Create unit tests for your new components
+   - Test with small examples before full implementation
+   - Ensure backward compatibility
+
+4. **Handle Edge Cases**
+   - Account for missing data
+   - Handle unexpected input values
+   - Implement appropriate error handling
+
+5. **Performance Considerations**
+   - Optimize computation for large datasets
+   - Consider using Polars' lazy execution
+   - Profile your implementation for bottlenecks 

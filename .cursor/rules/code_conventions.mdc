@@ -1,0 +1,164 @@
+---
+description: Coding standards and conventions for the NCAA March Madness Predictor, including naming patterns, typing, documentation, and best practices. Essential reference for writing compliant code.
+globs: ["*.py"]
+alwaysApply: false
+---
+
+# Code Conventions - NCAA March Madness Predictor
+
+## Naming Conventions
+
+- **Files**: Snake case (`feature_engineering.py`)
+- **Classes**: Pascal case (`DataProcessor`)
+- **Functions/Methods**: Snake case (`process_data()`)
+- **Variables**: Snake case (`team_stats`)
+- **Constants**: Uppercase with underscores (`BASE_URL`)
+
+## Type Hints & Documentation
+
+Always use type hints and Google-style docstrings:
+
+```python
+def calculate_team_efficiency(
+    team_data: pl.DataFrame,
+    season: int
+) -> pl.DataFrame:
+    """
+    Calculate offensive and defensive efficiency ratings for teams.
+    
+    Args:
+        team_data: DataFrame containing team statistics
+        season: Basketball season year (e.g., 2023)
+        
+    Returns:
+        DataFrame with added efficiency columns
+    """
+    # Implementation...
+```
+
+## Data Processing Standards
+
+- **USE POLARS, NOT PANDAS** - This is critical!
+- Use explicit schemas for all DataFrames
+- Use Path objects from pathlib for file paths
+- Handle errors with informative messages
+
+```python
+# CORRECT: Using Polars with schema
+import polars as pl
+from pathlib import Path
+
+# Define schema
+team_schema = {
+    "team_id": pl.Int64,
+    "team_name": pl.Utf8,
+    "points": pl.Float64,
+    # Other fields...
+}
+
+# Load data with proper path handling
+file_path = Path("data/processed") / f"team_stats_{season}.parquet"
+team_stats = pl.read_parquet(file_path, schema=team_schema)
+```
+
+## Configuration Management
+
+- Configuration is loaded from YAML files in `config/`
+- Access config through the config module:
+
+```python
+from src.pipeline.config import load_config
+
+# Load the configuration
+config = load_config("config/pipeline_config.yaml")
+
+# Access config values
+data_dir = config.data.raw_dir
+years = config.data.years
+```
+
+## Logging
+
+- Use the built-in logging framework
+- Include context in log messages
+- Don't use print statements for operational logging
+
+```python
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Informative logs with context
+logger.info(f"Processing season {season} data")
+logger.error(f"Failed to load file: {file_path}")
+```
+
+## Error Handling
+
+```python
+try:
+    data = pl.read_parquet(file_path)
+except pl.exceptions.NoDataError:
+    logger.error(f"File contains no data: {file_path}")
+    return None
+except Exception as e:
+    logger.exception(f"Error loading data from {file_path}: {e}")
+    raise
+```
+
+## File Paths and Data Storage
+
+- **Raw data**: `data/raw/{category}/{year}.parquet`
+- **Processed data**: `data/processed/{category}/{year}.parquet`
+- **Feature data**: `data/features/{feature_set}/{year}.parquet`
+- **Model files**: `models/{model_type}/{model_name}.pt`
+- **Reports**: `reports/findings/{analysis_name}.md`
+- **Visualizations**: `reports/figures/{viz_name}.{ext}`
+
+Always use `pathlib.Path` for constructing file paths:
+
+```python
+from pathlib import Path
+
+# Correct
+base_dir = Path(config.data.raw_dir)
+file_path = base_dir / category / f"{year}.parquet"
+
+# Incorrect - Don't do this
+file_path = config.data.raw_dir + "/" + category + "/" + str(year) + ".parquet"
+```
+
+## Testing Standards
+
+- Tests are located in the `tests/` directory
+- Test files are named `test_*.py`
+- Use pytest fixtures for shared test resources
+- Include both unit tests and integration tests
+
+```python
+# Example test
+def test_data_processing():
+    """Test that data processing works correctly."""
+    # Setup
+    test_data = pl.DataFrame(...)
+    
+    # Execute
+    result = process_data(test_data)
+    
+    # Assert
+    assert result.shape[0] == test_data.shape[0]
+    assert "processed_column" in result.columns
+    assert result["processed_column"].is_not_null().all()
+```
+
+## Common Pitfalls to Avoid
+
+- ⚠️ Using Pandas instead of Polars
+- ⚠️ Hardcoding file paths or using string concatenation
+- ⚠️ Mixing data processing with feature engineering 
+- ⚠️ Not handling missing values explicitly
+- ⚠️ Using broad except clauses without specific handling
+- ⚠️ Not following data storage conventions
+- ⚠️ Ignoring configuration values
+- ⚠️ Using print instead of proper logging
+- ⚠️ Importing data from outside the official sources 

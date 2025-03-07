@@ -1,0 +1,442 @@
+---
+description: Guidelines and strategies for optimizing performance in data processing, feature engineering, and model training. Use when implementing new components or optimizing existing ones.
+globs: ["src/**/*.py"]
+alwaysApply: false
+---
+
+# Performance Optimization Guidelines
+
+## Performance Philosophy
+
+The NCAA March Madness Predictor prioritizes performance optimization to ensure:
+
+1. **Efficient Processing**: Data processing pipelines complete in reasonable timeframes
+2. **Resource Utilization**: Computing resources are used efficiently
+3. **Scalability**: Components can scale to handle larger datasets
+4. **User Experience**: Interactive components respond quickly
+5. **Reproducibility**: Performance optimizations don't impact results
+
+## Key Performance Areas
+
+Performance optimization focuses on these key areas:
+
+1. **Data Loading**: Efficiently loading and caching data
+2. **Data Processing**: Optimizing data transformation operations
+3. **Feature Engineering**: Efficiently generating features
+4. **Model Training**: Optimizing model training and inference
+5. **Memory Management**: Minimizing memory usage
+6. **Parallel Processing**: Leveraging parallel execution
+
+## Data Processing Optimization
+
+### Polars Over Pandas
+
+The project uses Polars instead of Pandas for most data processing tasks:
+
+```python
+# Preferred: Using Polars
+import polars as pl
+
+# Load data with Polars
+df = pl.read_parquet("data/processed/team_stats.parquet")
+
+# Efficient filtering with lazy execution
+filtered_df = (
+    df.lazy()
+    .filter(pl.col("season") >= 2015)
+    .select([
+        pl.col("team_id"),
+        pl.col("offensive_rating"),
+        pl.col("defensive_rating")
+    ])
+    .collect()
+)
+```
+
+### Lazy Evaluation
+
+Use lazy evaluation for complex operations:
+
+```python
+# Create a lazy DataFrame
+lazy_df = pl.scan_parquet("data/processed/team_stats.parquet")
+
+# Build up operations
+pipeline = (
+    lazy_df
+    .filter(pl.col("season") >= 2015)
+    .with_columns([
+        (pl.col("points") / pl.col("possessions") * 100).alias("offensive_rating"),
+        (pl.col("opp_points") / pl.col("possessions") * 100).alias("defensive_rating")
+    ])
+    .select([
+        pl.col("team_id"),
+        pl.col("season"),
+        pl.col("offensive_rating"),
+        pl.col("defensive_rating")
+    ])
+)
+
+# Execute the pipeline only when needed
+result = pipeline.collect()
+```
+
+### Vectorized Operations
+
+Always use vectorized operations instead of loops:
+
+```python
+# Bad: Using loops
+result = []
+for i in range(len(df)):
+    result.append(df["value1"][i] * df["value2"][i])
+
+# Good: Using vectorized operations
+result = df["value1"] * df["value2"]
+```
+
+### Optimized File Formats
+
+Use optimized file formats:
+
+1. **Parquet**: For most data storage
+2. **Arrow**: For in-memory data sharing
+3. **CSV**: Only for export/import with external systems
+
+```python
+# Write to Parquet with compression
+df.write_parquet(
+    "data/processed/team_stats.parquet",
+    compression="zstd",
+    use_pyarrow=True
+)
+
+# Read with specific columns to reduce memory usage
+df = pl.read_parquet(
+    "data/processed/team_stats.parquet",
+    columns=["team_id", "season", "offensive_rating"]
+)
+```
+
+## Memory Management
+
+### Chunked Processing
+
+Process large datasets in chunks:
+
+```python
+def process_in_chunks(file_path, chunk_size=100_000):
+    """Process a large dataset in chunks."""
+    reader = pl.scan_parquet(file_path)
+    total_rows = reader.collect().height
+    
+    results = []
+    for i in range(0, total_rows, chunk_size):
+        # Process each chunk
+        chunk = (
+            reader
+            .slice(i, chunk_size)
+            .collect()
+        )
+        processed = process_chunk(chunk)
+        results.append(processed)
+    
+    # Combine results
+    return pl.concat(results)
+```
+
+### Memory Profiling
+
+Use memory profiling to identify bottlenecks:
+
+```python
+from memory_profiler import profile
+
+@profile
+def memory_intensive_function():
+    # Function code
+    pass
+```
+
+### Resource Cleanup
+
+Explicitly clean up resources:
+
+```python
+# Explicitly delete large objects when no longer needed
+del large_dataframe
+import gc
+gc.collect()
+```
+
+## Parallel Processing
+
+### Parallel Execution
+
+Use parallel processing for independent operations:
+
+```python
+import multiprocessing as mp
+from functools import partial
+
+def process_season(season, base_params):
+    # Process a single season
+    # ...
+    return result
+
+def process_all_seasons(seasons, params):
+    """Process multiple seasons in parallel."""
+    process_fn = partial(process_season, base_params=params)
+    
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.map(process_fn, seasons)
+    
+    return results
+```
+
+### Concurrent IO
+
+Use concurrent IO operations:
+
+```python
+import concurrent.futures
+
+def download_file(url, dest):
+    # Download logic
+    # ...
+    return dest
+
+def download_multiple_files(urls, destinations):
+    """Download multiple files concurrently."""
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [
+            executor.submit(download_file, url, dest)
+            for url, dest in zip(urls, destinations)
+        ]
+        
+        results = [future.result() for future in concurrent.futures.as_completed(futures)]
+    
+    return results
+```
+
+## Model Training Optimization
+
+### Batch Processing
+
+Use appropriate batch sizes for model training:
+
+```python
+def train_model(model, dataset, batch_size=64):
+    """Train model with appropriate batch size."""
+    dataloader = torch.utils.data.DataLoader(
+        dataset, 
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=4
+    )
+    
+    for batch in dataloader:
+        # Process batch
+        # ...
+```
+
+### GPU Acceleration
+
+Leverage GPU acceleration when available:
+
+```python
+def get_device():
+    """Get the appropriate device for model training."""
+    if torch.cuda.is_available():
+        return torch.device("cuda")
+    else:
+        return torch.device("cpu")
+
+# Use the device
+device = get_device()
+model = model.to(device)
+```
+
+### Mixed Precision Training
+
+Use mixed precision training for faster execution:
+
+```python
+from torch.cuda.amp import autocast, GradScaler
+
+def train_with_mixed_precision(model, dataloader, optimizer):
+    """Train using mixed precision."""
+    scaler = GradScaler()
+    
+    for batch in dataloader:
+        # Move batch to device
+        inputs, targets = batch
+        
+        # Use mixed precision
+        with autocast():
+            outputs = model(inputs)
+            loss = loss_fn(outputs, targets)
+        
+        # Scale gradients and optimize
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+```
+
+## Profiling and Benchmarking
+
+### Code Profiling
+
+Profile code to identify bottlenecks:
+
+```python
+import cProfile
+import pstats
+
+# Profile a function
+cProfile.run('function_to_profile()', 'profile_stats')
+
+# Analyze results
+p = pstats.Stats('profile_stats')
+p.sort_stats('cumulative').print_stats(20)
+```
+
+### Timing Measurements
+
+Measure execution time for critical operations:
+
+```python
+import time
+
+def time_function(func, *args, **kwargs):
+    """Time the execution of a function."""
+    start_time = time.time()
+    result = func(*args, **kwargs)
+    end_time = time.time()
+    
+    print(f"Function {func.__name__} took {end_time - start_time:.4f} seconds to run")
+    return result
+```
+
+## General Optimization Guidelines
+
+1. **Measure First**: Profile before optimizing to identify bottlenecks
+2. **Optimize Critical Paths**: Focus on frequently executed code
+3. **Use Appropriate Data Structures**: Choose data structures based on access patterns
+4. **Minimize Data Copies**: Avoid unnecessary data copying
+5. **Leverage Caching**: Cache expensive computation results
+6. **Use Eager and Lazy Appropriately**: Choose between eager and lazy evaluation based on context
+7. **Read Documentation**: Check library documentation for performance best practices
+
+## Common Performance Pitfalls
+
+1. **Premature Optimization**: Optimizing without profiling
+2. **Unnecessary Conversions**: Converting between data formats without need
+3. **Inefficient Aggregations**: Using inefficient methods for data aggregation
+4. **Memory Leaks**: Not cleaning up large objects
+5. **Sequential Processing**: Processing data sequentially when it could be parallelized
+6. **Ignoring IO Bottlenecks**: Not optimizing file IO operations
+7. **Inefficient SQL Queries**: Using inefficient database queries
+
+## Optimization Checklist
+
+Before committing performance-critical code, check:
+
+- [ ] Code has been profiled to identify bottlenecks
+- [ ] Vectorized operations are used where possible
+- [ ] Appropriate data formats are used
+- [ ] Parallel processing is leveraged for independent operations
+- [ ] Memory usage is monitored and optimized
+- [ ] IO operations are optimized
+- [ ] Appropriate batch sizes are used for model training
+- [ ] GPU acceleration is used when available
+- [ ] Results are consistent before and after optimization
+
+## Example Performance Improvements
+
+### Example 1: Optimized Feature Calculation
+
+```python
+# Before optimization
+def calculate_features(df):
+    result = []
+    for team_id in df["team_id"].unique():
+        team_data = df[df["team_id"] == team_id]
+        for season in team_data["season"].unique():
+            season_data = team_data[team_data["season"] == season]
+            avg_points = season_data["points"].mean()
+            avg_rebounds = season_data["rebounds"].mean()
+            result.append({
+                "team_id": team_id,
+                "season": season,
+                "avg_points": avg_points,
+                "avg_rebounds": avg_rebounds
+            })
+    return pd.DataFrame(result)
+
+# After optimization
+def calculate_features_optimized(df):
+    return (
+        df.lazy()
+        .groupby(["team_id", "season"])
+        .agg([
+            pl.col("points").mean().alias("avg_points"),
+            pl.col("rebounds").mean().alias("avg_rebounds")
+        ])
+        .collect()
+    )
+```
+
+### Example 2: Parallel Feature Generation
+
+```python
+# Before optimization
+def generate_all_features(seasons):
+    results = []
+    for season in seasons:
+        result = generate_features_for_season(season)
+        results.append(result)
+    return pl.concat(results)
+
+# After optimization
+def generate_all_features_parallel(seasons):
+    with mp.Pool(processes=mp.cpu_count()) as pool:
+        results = pool.map(generate_features_for_season, seasons)
+    return pl.concat(results)
+```
+
+## Performance Monitoring
+
+Continuously monitor performance metrics:
+
+1. **Execution Time**: Track execution time for critical operations
+2. **Memory Usage**: Monitor memory usage during processing
+3. **CPU Utilization**: Monitor CPU utilization
+4. **GPU Utilization**: Monitor GPU utilization for model training
+5. **Disk IO**: Monitor disk IO operations
+
+Use logging to track performance metrics:
+
+```python
+import logging
+import time
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def log_performance(func):
+    """Decorator to log performance metrics."""
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        
+        logger.info(f"{func.__name__} took {end_time - start_time:.4f} seconds to run")
+        return result
+    return wrapper
+
+@log_performance
+def performance_critical_function():
+    # Function code
+    pass
+``` 

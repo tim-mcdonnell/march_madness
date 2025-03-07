@@ -1,0 +1,326 @@
+---
+description: Structure, patterns, and best practices for exploratory data analysis scripts. Reference when creating or modifying EDA scripts to ensure consistent, reproducible analyses.
+globs: ["src/eda/*.py"]
+alwaysApply: false
+---
+
+# EDA Script Structure - NCAA March Madness Predictor
+
+## Overview
+
+Exploratory Data Analysis (EDA) in this project serves to:
+1. Uncover patterns in NCAA basketball data that correlate with tournament success
+2. Identify key features for predictive modeling
+3. Generate visualizations that communicate insights effectively
+4. Document findings in structured, reproducible reports
+
+## Standard EDA Script Template
+
+All EDA scripts should follow this modular structure:
+
+```python
+#!/usr/bin/env python3
+"""
+[Script Title]
+
+This EDA script [one-sentence description of purpose]
+
+Analysis objectives:
+1. [Objective 1]
+2. [Objective 2]
+...
+
+Output:
+- [Output 1]
+- [Output 2]
+...
+"""
+
+import os
+import polars as pl
+import plotly.express as px
+import plotly.graph_objects as go
+import logging
+from datetime import datetime
+from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+    ]
+)
+logger = logging.getLogger('[script_name_logger]')
+
+# Define output directories
+REPORTS_DIR = os.path.join('reports', 'findings')
+FIGURES_DIR = os.path.join('reports', 'figures')
+os.makedirs(REPORTS_DIR, exist_ok=True)
+os.makedirs(FIGURES_DIR, exist_ok=True)
+
+def load_data():
+    """Load and prepare data for analysis."""
+    # Implementation
+    pass
+
+def analysis_function(data):
+    """Perform specific analysis."""
+    # Implementation
+    pass
+
+def generate_visualizations(analysis_results):
+    """Generate visualizations from analysis results."""
+    # Implementation
+    pass
+
+def generate_report(analysis_results, vis_paths):
+    """Generate comprehensive markdown report."""
+    # Implementation
+    pass
+
+def main():
+    """Main execution function."""
+    logger.info("Starting analysis")
+    
+    # Load data
+    data = load_data()
+    
+    # Conduct analysis
+    analysis_results = analysis_function(data)
+    
+    # Generate visualizations
+    vis_paths = generate_visualizations(analysis_results)
+    
+    # Generate report
+    report_path = generate_report(analysis_results, vis_paths)
+    
+    logger.info(f"Analysis completed. Report at: {report_path}")
+
+if __name__ == "__main__":
+    main()
+```
+
+## Data Loading Best Practices
+
+Always use Polars for data loading and manipulation:
+
+```python
+def load_data():
+    """
+    Load and prepare the necessary datasets for analysis.
+    
+    Returns:
+        tuple: Processed datasets ready for analysis
+    """
+    logger.info("Loading data...")
+    
+    # Load schedules data
+    schedules_df = pl.read_parquet('data/processed/schedules.parquet')
+    logger.info(f"Loaded schedules data with {schedules_df.shape[0]} rows")
+    
+    # Load team statistics data
+    team_stats_df = pl.read_parquet('data/processed/team_season_statistics.parquet')
+    logger.info(f"Loaded team stats with {team_stats_df.shape[0]} rows")
+    
+    # Additional data processing if needed
+    # ...
+    
+    return schedules_df, team_stats_df
+```
+
+## Analysis Function Pattern
+
+Design analysis functions to be focused on a single aspect:
+
+```python
+def analyze_conference_performance(tournament_games, team_stats_df):
+    """
+    Analyze NCAA tournament performance by conference.
+    
+    Args:
+        tournament_games (pl.DataFrame): DataFrame of tournament games
+        team_stats_df (pl.DataFrame): DataFrame of team statistics
+        
+    Returns:
+        dict: Conference performance metrics
+    """
+    logger.info("Analyzing conference performance...")
+    
+    # Create results dictionary
+    conference_results = {}
+    
+    # Analysis implementation
+    # ...
+    
+    logger.info(f"Analyzed performance for {len(conference_results)} conferences")
+    return conference_results
+```
+
+## Visualization Best Practices
+
+Generate clear, informative visualizations:
+
+```python
+def generate_visualizations(conference_results):
+    """
+    Generate visualizations for the analysis.
+    
+    Args:
+        conference_results (dict): Conference performance results
+        
+    Returns:
+        dict: Paths to generated visualizations
+    """
+    logger.info("Generating visualizations...")
+    vis_paths = {}
+    
+    # Generate conference win rates visualization
+    conf_win_rates = [
+        {'Conference': conf_name, 'Win Rate': data['win_rate']} 
+        for conf_name, data in conference_results.items()
+        if data['total_games'] >= 10  # Only include conferences with enough games
+    ]
+    conf_win_rates_df = pl.DataFrame(conf_win_rates).sort('Win Rate', descending=True)
+    
+    # Create visualization
+    fig = px.bar(
+        conf_win_rates_df.to_pandas(), 
+        x='Conference', 
+        y='Win Rate',
+        title='NCAA Tournament Win Rates by Conference (Min. 10 Games)'
+    )
+    
+    # Save visualization
+    png_path = os.path.join(FIGURES_DIR, 'conference_win_rates.png')
+    fig.write_image(png_path)
+    vis_paths['conference_win_rates'] = png_path
+    
+    return vis_paths
+```
+
+## Report Generation Pattern
+
+```python
+def generate_report(analysis_results, vis_paths):
+    """
+    Generate a comprehensive markdown report of findings.
+    
+    Args:
+        analysis_results: Results from analysis functions
+        vis_paths: Paths to visualization files
+        
+    Returns:
+        str: Path to the generated report
+    """
+    logger.info("Generating analysis report...")
+    
+    # Create timestamp for filename
+    timestamp = datetime.now().strftime("%Y-%m-%d")
+    report_file = os.path.join(REPORTS_DIR, f"analysis_{timestamp}.md")
+    
+    # Write the report
+    with open(report_file, 'w') as f:
+        f.write(f"# Analysis Title\n\n")
+        f.write(f"*Analysis Date: {timestamp}*\n\n")
+        
+        f.write("## Executive Summary\n\n")
+        f.write("This analysis examines...\n\n")
+        
+        f.write("## Key Findings\n\n")
+        
+        # Include visualization
+        if 'conference_win_rates' in vis_paths:
+            f.write(f"![Conference Win Rates](../figures/{os.path.basename(vis_paths['conference_win_rates'])})\n\n")
+        
+        # Include methodology section
+        f.write("## Methodology\n\n")
+        f.write("This analysis uses the following approach...\n\n")
+        
+        # Include limitations
+        f.write("### Limitations\n\n")
+        f.write("This analysis has the following limitations...\n\n")
+    
+    return report_file
+```
+
+## Report Structure
+
+All EDA reports should follow this standard structure:
+
+1. **Title and Date**: Clear title and analysis date
+2. **Executive Summary**: Brief overview of the analysis and key findings
+3. **Key Findings**: Detailed presentation of insights with supporting visualizations
+4. **Methodology**: Description of the analytical approach and data used
+5. **Limitations**: Acknowledgment of constraints and potential biases
+6. **Next Steps**: Suggestions for further analysis or actions
+
+## Common Analysis Tasks
+
+### Win Rate Analysis
+
+```python
+def analyze_win_rates(tournament_games, entity_id_col, entity_name_col):
+    """Calculate win rates for entities (teams, conferences, etc.)."""
+    # Identify unique entities
+    unique_entities = set(tournament_games[entity_id_col].unique().to_list())
+    
+    results = {}
+    for entity_id in unique_entities:
+        # Filter games for this entity
+        entity_games = tournament_games.filter(
+            (pl.col('home_id') == entity_id) | 
+            (pl.col('away_id') == entity_id)
+        )
+        
+        # Get entity name
+        entity_name_rows = entity_games.filter(pl.col(entity_id_col) == entity_id).select(entity_name_col)
+        if entity_name_rows.shape[0] > 0:
+            entity_name = entity_name_rows[0, 0]
+        else:
+            entity_name = f"Unknown ({entity_id})"
+        
+        # Count games and wins
+        total_games = entity_games.shape[0]
+        
+        # Home wins
+        home_wins = entity_games.filter(
+            (pl.col('home_id') == entity_id) & 
+            (pl.col('home_score') > pl.col('away_score'))
+        ).shape[0]
+        
+        # Away wins
+        away_wins = entity_games.filter(
+            (pl.col('away_id') == entity_id) & 
+            (pl.col('away_score') > pl.col('home_score'))
+        ).shape[0]
+        
+        total_wins = home_wins + away_wins
+        win_rate = total_wins / total_games if total_games > 0 else 0
+        
+        # Store results
+        results[entity_name] = {
+            'entity_id': entity_id,
+            'total_games': total_games,
+            'total_wins': total_wins,
+            'win_rate': win_rate,
+            'home_wins': home_wins,
+            'away_wins': away_wins
+        }
+    
+    return results
+```
+
+## EDA Script Execution
+
+Run EDA scripts as modules:
+
+```bash
+python -m src.eda.script_name
+```
+
+## Output Locations
+
+- Analysis reports: `reports/findings/{analysis_name}_{date}.md`
+- Visualizations: `reports/figures/{visualization_name}.png` 

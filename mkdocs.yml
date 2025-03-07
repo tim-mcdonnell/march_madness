@@ -49,32 +49,22 @@ plugins:
 nav:
   - Home: index.md
   - Installation: installation.md
-  - User Guide:
-    - Getting Started: user_guide/getting_started.md
-    - Pipeline Usage: user_guide/pipeline_usage.md
-    - Configuration: user_guide/configuration.md
-  - Technical Reference:
-    - Pipeline:
-      - Architecture Overview: reference/pipeline/overview.md
-      - Data Stage: reference/pipeline/data_stage.md
-      - EDA Stage: reference/pipeline/eda_stage.md
-      - Feature Engineering: reference/pipeline/feature_engineering.md
-      - Model Development: reference/pipeline/model_development.md
-      - Evaluation: reference/pipeline/evaluation.md
-    - Data: 
-      - Data Sources: reference/data/sources.md
-      - Processing: reference/data/processing.md
-      - Validation: reference/data/validation.md
-    - Models:
-      - Overview: reference/models/overview.md
-      - Evaluation: reference/models/evaluation.md
+  - Pipeline:
+    - Overview: pipeline/overview.md
+    - Configuration: pipeline/configuration.md
+    - Data Stage: pipeline/data-stage.md
+    - EDA Stage: pipeline/eda-stage.md
+    - Feature Engineering: pipeline/feature-engineering.md
+    - Model Development: pipeline/model-development.md
+    - Evaluation: pipeline/evaluation.md
   - API Reference:
     - Data: api/data.md
     - Pipeline: api/pipeline.md
     - Features: api/features.md
     - Models: api/models.md
     - Visualization: api/visualization.md
-  - Developer Guide:
-    - Contributing: contributing.md
-    - Extending: developer_guide/extending.md
-  - Methodology: methodology.md 
+  - Examples:
+    - Data Download: examples/data-download.md
+    - Pipeline Usage: examples/pipeline-usage.md
+  - Methodology: methodology.md
+  - Contributing: contributing.md 
