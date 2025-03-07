@@ -7,7 +7,7 @@ name = "march_madness"
 version = "0.1.0"
 description = "NCAA March Madness Predictor"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 license = {text = "MIT"}
 authors = [
     {name = "Tim McDonnell"}

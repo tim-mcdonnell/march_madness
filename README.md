@@ -45,7 +45,7 @@ These files are available for seasons 2003 through 2025, providing us with 22+ y
 ## 🏗️ Project Structure
 
 ```
-ncaa-march-madness-predictor/
+march_madness/
 ├── README.md               # Project overview and documentation
 ├── requirements.txt        # Python dependencies
 ├── .gitignore              # Files to exclude from git
@@ -127,12 +127,12 @@ This stack was chosen for its performance, particularly when working with large 
 1. Clone the repository:
 ```bash
 git clone https://github.com/tim-mcdonnell/march_madness.git
-cd ncaa-march-madness
+cd march_madness
 ```
 
 2. Create a virtual environment:
 ```bash
-uv venv
+uv venv -p 3.11
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
