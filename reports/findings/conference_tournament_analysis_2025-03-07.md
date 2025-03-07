@@ -1,6 +1,6 @@
 # NCAA Tournament Performance Analysis by Conference and Team
 
-*Analysis Date: 2025-03-04*
+*Analysis Date: 2025-03-07*
 
 ## Executive Summary
 
@@ -28,16 +28,16 @@ Top performing teams by win rate (minimum 5 tournament games):
 
 | Team | Win Rate | Games Played | Avg Point Differential |
 |------|----------|-------------|----------------------|
-| Lions | 0.857 | 7 | 9.6 |
-| Warriors | 0.833 | 6 | 6.0 |
 | Jayhawks | 0.741 | 112 | 7.9 |
-| Blue Devils | 0.735 | 102 | 7.0 |
 | Tar Heels | 0.694 | 124 | 6.9 |
 | Buckeyes | 0.671 | 85 | 4.6 |
 | Gators | 0.670 | 97 | 6.5 |
-| Aztecs | 0.667 | 81 | 3.8 |
 | Ducks | 0.667 | 87 | 4.1 |
+| Aztecs | 0.667 | 81 | 3.8 |
 | Peacocks | 0.667 | 39 | 1.2 |
+| Wolverines | 0.663 | 92 | 5.1 |
+| Spartans | 0.660 | 100 | 3.2 |
+| Shockers | 0.627 | 75 | 5.4 |
 
 ![Top Teams Win Rates](../figures/top_teams_win_rates.png)
 
@@ -59,16 +59,16 @@ Matchups with significant performance differences (minimum 3 games):
 
 | Conference 1 | Conference 2 | Games | Conf 1 Win Rate |
 |--------------|--------------|-------|----------------|
-| Big Ten Conference | America East Conference | 4 | 1.000 |
-| Big Ten Conference | Patriot League | 6 | 1.000 |
-| Big Ten Conference | Big Sky Conference | 4 | 1.000 |
-| Big Ten Conference | Big South Conference | 3 | 1.000 |
-| Big Ten Conference | Big West Conference | 5 | 1.000 |
-| Southeastern Conference | America East Conference | 4 | 1.000 |
-| Southeastern Conference | Southwestern Athletic Conference | 4 | 1.000 |
-| Southeastern Conference | Southland Conference | 3 | 1.000 |
-| Southeastern Conference | Western Athletic Conference | 6 | 1.000 |
-| Southeastern Conference | Big South Conference | 3 | 1.000 |
+| Western Athletic Conference | Sun Belt Conference | 3 | 1.000 |
+| Atlantic Coast Conference | Northeast Conference | 5 | 1.000 |
+| Atlantic Coast Conference | Ivy League | 6 | 1.000 |
+| Atlantic Coast Conference | Mid-Eastern Athletic Conference | 8 | 1.000 |
+| Atlantic Coast Conference | Summit League | 3 | 1.000 |
+| Atlantic Coast Conference | Big South Conference | 4 | 1.000 |
+| Atlantic Coast Conference | Big West Conference | 5 | 1.000 |
+| Atlantic Coast Conference | Sun Belt Conference | 7 | 1.000 |
+| Atlantic Coast Conference | Southwestern Athletic Conference | 4 | 1.000 |
+| Pac-12 Conference | Southland Conference | 3 | 1.000 |
 
 ## Methodology
 

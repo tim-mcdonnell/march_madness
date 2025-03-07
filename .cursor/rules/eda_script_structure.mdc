@@ -232,7 +232,7 @@ def generate_report(analysis_results, vis_paths):
         
         # Include visualization
         if 'conference_win_rates' in vis_paths:
-            f.write(f"![Conference Win Rates](../figures/{os.path.basename(vis_paths['conference_win_rates'])})\n\n")
+            f.write(f"![Conference Win Rates](mdc:../figures/{os.path.basename(vis_paths['conference_win_rates'])})\n\n")
         
         # Include methodology section
         f.write("## Methodology\n\n")
