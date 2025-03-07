@@ -118,7 +118,7 @@ This stack was chosen for its performance, particularly when working with large 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.11
 - Git
 - [uv](https://github.com/astral-sh/uv) - Fast Python package manager
 
@@ -132,7 +132,7 @@ cd march_madness
 
 2. Create a virtual environment:
 ```bash
-uv venv -p 3.11
+uv venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
