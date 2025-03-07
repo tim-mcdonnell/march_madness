@@ -1,6 +1,10 @@
 # Pipeline Documentation
 
-This directory contains documentation about the NCAA March Madness Predictor's pipeline architecture and components.
+> **Documentation Relocated**: The pipeline documentation has been consolidated.
+> 
+> Please see the [Pipeline Reference Documentation](../reference/pipeline/overview.md) for complete and updated information.
+
+All pipeline technical reference documentation has been consolidated under `docs/reference/pipeline/` to improve organization and reduce redundancy.
 
 ## Purpose
 

@@ -1,26 +1,23 @@
 """
 Regular Season vs Tournament Performance Analysis
 
-This script analyzes the relationship between regular season performance metrics
-and tournament success to identify which statistics are most predictive of
-March Madness outcomes.
+This script analyzes the differences between team performance in 
+regular season games versus tournament games.
 
-Research questions addressed:
+Key questions addressed:
 1. Which regular season metrics best correlate with tournament advancement?
 2. How does team performance change from regular season to tournament play?
 3. Are there teams that consistently over/underperform in tournaments relative to their regular season metrics?
 4. Which conferences perform better or worse in tournaments relative to regular season expectations?
 """
 
-import os
 import logging
-import polars as pl
+import os
+from pathlib import Path
+
 import plotly.express as px
 import plotly.graph_objects as go
-import numpy as np
-from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
-import json
+import polars as pl
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -98,7 +95,9 @@ def enrich_data(df: pl.DataFrame) -> pl.DataFrame:
         pl.col("DR").div(pl.col("DR") + pl.col("opponent_OR")).mul(100).alias("DR_pct"),
         
         # Scoring Efficiency
-        pl.col("PTS").div(pl.col("FGA") + pl.col("TO") + 0.44 * pl.col("FTA") - pl.col("OR")).alias("scoring_efficiency"),
+        pl.col("PTS").div(
+            pl.col("FGA") + pl.col("TO") + 0.44 * pl.col("FTA") - pl.col("OR")
+        ).alias("scoring_efficiency"),
         
         # Season identifier 
         pl.concat_str([
@@ -289,7 +288,7 @@ def create_visualizations(
             x=[0, 100], 
             y=[0, 100], 
             mode='lines', 
-            line=dict(color='red', dash='dash', width=1),
+            line={'color': 'red', 'dash': 'dash', 'width': 1},
             name='Equal Performance',
             opacity=0.5
         )
@@ -300,13 +299,13 @@ def create_visualizations(
         width=900,
         height=700,
         template="plotly_white",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        )
+        legend={
+            'orientation': "h",
+            'yanchor': "bottom",
+            'y': 1.02,
+            'xanchor': "right",
+            'x': 1
+        }
     )
     
     # Save figure
@@ -333,7 +332,7 @@ def create_visualizations(
         fig_corr.update_layout(
             width=900,
             height=700,
-            yaxis=dict(autorange="reversed"),
+            yaxis={'autorange': "reversed"},
             template="plotly_white"
         )
         
@@ -361,8 +360,6 @@ def create_visualizations(
                 })
         
         if heatmap_data:
-            heatmap_df = pl.DataFrame(heatmap_data)
-            
             # Create heatmap
             fig_heatmap = px.imshow(
                 [[row["Correlation"]] for row in heatmap_data],

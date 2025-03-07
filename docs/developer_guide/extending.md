@@ -531,6 +531,4 @@ After extending the project, remember to:
 
 1. Update documentation to reflect your changes
 2. Add tests for your new components
-3. Consider contributing your extensions back to the main project
-
-For more detailed examples, see the [Examples](../examples) directory. 
+3. Consider contributing your extensions back to the main project 

@@ -1,5 +1,11 @@
 # Pipeline Overview
 
+> **Documentation Relocated**: This document has been consolidated into the main pipeline documentation. 
+> 
+> Please see the [Pipeline Architecture Overview](../reference/pipeline/overview.md) for the complete and updated documentation.
+
+This page has been moved as part of documentation reorganization to reduce redundancy and improve content organization.
+
 The NCAA March Madness Predictor uses a modular pipeline architecture to process data, train models, and generate predictions. This page provides an overview of the pipeline components and how they work together.
 
 ## Pipeline Architecture

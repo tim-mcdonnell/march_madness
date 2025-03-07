@@ -835,11 +835,7 @@ class DataCleaner:
                     )
                     
                     # If the most complete name is used at least once, prefer it
-                    if name_counts.get(most_complete, 0) > 0:
-                        canonical_name = most_complete
-                    else:
-                        # Otherwise use most frequent
-                        canonical_name = name_counts.index[0]
+                    canonical_name = most_complete if name_counts.get(most_complete, 0) > 0 else name_counts.index[0]
                     
                     for name in names:
                         if name != canonical_name:

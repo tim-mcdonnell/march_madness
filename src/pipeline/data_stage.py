@@ -124,9 +124,6 @@ def run(
                     )
                 }
     
-    # Validate downloaded data
-    validate_downloaded_data(config)
-    
     logger.info("Data collection and cleaning stage completed")
     return results
 

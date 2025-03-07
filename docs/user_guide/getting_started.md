@@ -150,6 +150,4 @@ python -m src.pipeline.data --years 2024
 ## Where to Go Next
 
 - [Pipeline Usage Guide](pipeline_usage.md): Learn more about the pipeline options
-- [Configuration Guide](configuration.md): Customize the behavior of the predictor
-- [Data Exploration Example](../examples/data_exploration.md): Example of how to explore the data
-- [Feature Engineering Example](../examples/feature_engineering.md): Learn how to create custom features 
+- [Configuration Guide](configuration.md): Customize the behavior of the predictor 

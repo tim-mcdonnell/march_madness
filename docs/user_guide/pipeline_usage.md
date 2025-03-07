@@ -229,7 +229,7 @@ python -m src.pipeline.main --log_level debug
 python -m src.pipeline.main --log_file custom_log.txt
 ```
 
-## Examples of Common Workflows
+## Common Workflow Templates
 
 ### Quick Prediction Workflow
 
@@ -312,5 +312,4 @@ python -m src.pipeline.main --param data.include_play_by_play=False
 - [Getting Started Guide](getting_started.md)
 - [Configuration Guide](configuration.md)
 - [Data Reference](../reference/data/overview.md)
-- [Model Reference](../reference/models/overview.md)
-- [Feature Engineering Example](../examples/feature_engineering.md) 
+- [Model Reference](../reference/models/overview.md) 

@@ -20,14 +20,13 @@ Output:
 - Markdown report of key findings
 """
 
+import logging
 import os
-import polars as pl
+from datetime import datetime
+
 import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import logging
-from datetime import datetime
-import kaleido  # Required for saving plotly figures as static images
+import polars as pl
 
 # Configure logging
 logging.basicConfig(
@@ -45,7 +44,7 @@ FIGURES_DIR = os.path.join('reports', 'figures')
 os.makedirs(REPORTS_DIR, exist_ok=True)
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
-def load_data():
+def load_data() -> tuple[pl.DataFrame, pl.DataFrame]:
     """
     Load and prepare the necessary datasets for analysis.
     
@@ -61,14 +60,17 @@ def load_data():
         # Load team season statistics
         team_stats_df = pl.read_parquet('data/processed/team_season_statistics.parquet')
         
-        logger.info(f"Loaded schedules data with {schedules_df.shape[0]} rows and team stats with {team_stats_df.shape[0]} rows")
+        logger.info(
+            f"Loaded schedules data with {schedules_df.shape[0]} rows "
+            f"and team stats with {team_stats_df.shape[0]} rows"
+        )
         return schedules_df, team_stats_df
     
     except Exception as e:
         logger.error(f"Error loading data: {e}")
         raise
 
-def identify_tournament_games(schedules_df):
+def identify_tournament_games(schedules_df) -> pl.DataFrame:
     """
     Identify and filter NCAA tournament games from the schedules dataset.
     
@@ -92,7 +94,7 @@ def identify_tournament_games(schedules_df):
     logger.info(f"Identified {tournament_games.shape[0]} tournament games")
     return tournament_games
 
-def analyze_conference_performance(tournament_games, team_stats_df):
+def analyze_conference_performance(tournament_games, team_stats_df) -> dict:
     """
     Analyze tournament performance by conference.
     
@@ -152,13 +154,13 @@ def analyze_conference_performance(tournament_games, team_stats_df):
         # Count home wins for the conference
         home_wins = tournament_games.filter(
             (pl.col('home_conference_id') == conf_id) & 
-            (pl.col('home_winner') == True)
+            pl.col('home_winner')
         ).shape[0]
         
         # Count away wins for the conference
         away_wins = tournament_games.filter(
             (pl.col('away_conference_id') == conf_id) & 
-            (pl.col('away_winner') == True)
+            pl.col('away_winner')
         ).shape[0]
         
         # Count total games played by the conference
@@ -168,10 +170,7 @@ def analyze_conference_performance(tournament_games, team_stats_df):
         total_games = home_games + away_games
         total_wins = home_wins + away_wins
         
-        if total_games > 0:
-            win_rate = total_wins / total_games
-        else:
-            win_rate = 0
+        win_rate = total_wins / total_games if total_games > 0 else 0
             
         # Calculate point differential metrics
         home_points = tournament_games.filter(pl.col('home_conference_id') == conf_id).select('home_score').sum()[0, 0]
@@ -208,7 +207,7 @@ def analyze_conference_performance(tournament_games, team_stats_df):
     logger.info(f"Analyzed performance for {len(conference_results)} conferences")
     return conference_results
 
-def analyze_team_performance(tournament_games, team_stats_df):
+def analyze_team_performance(tournament_games, team_stats_df) -> dict:
     """
     Analyze tournament performance by individual teams.
     
@@ -252,13 +251,13 @@ def analyze_team_performance(tournament_games, team_stats_df):
         # Home wins
         home_wins = tournament_games.filter(
             (pl.col('home_id') == team_id) & 
-            (pl.col('home_winner') == True)
+            pl.col('home_winner')
         ).shape[0]
         
         # Away wins
         away_wins = tournament_games.filter(
             (pl.col('away_id') == team_id) & 
-            (pl.col('away_winner') == True)
+            pl.col('away_winner')
         ).shape[0]
         
         # Total games
@@ -268,10 +267,7 @@ def analyze_team_performance(tournament_games, team_stats_df):
         total_games = home_games + away_games
         total_wins = home_wins + away_wins
         
-        if total_games > 0:
-            win_rate = total_wins / total_games
-        else:
-            win_rate = 0
+        win_rate = total_wins / total_games if total_games > 0 else 0
             
         # Calculate point differential metrics
         home_points = tournament_games.filter(pl.col('home_id') == team_id).select('home_score').sum()[0, 0]
@@ -294,15 +290,8 @@ def analyze_team_performance(tournament_games, team_stats_df):
         
         # Get conference information for this team
         conf_rows = tournament_games.filter(pl.col('home_id') == team_id).select('home_conference_id')
-        if conf_rows.shape[0] > 0:
-            conf_id = conf_rows[0, 0]
-        else:
-            conf_rows = tournament_games.filter(pl.col('away_id') == team_id).select('away_conference_id')
-            if conf_rows.shape[0] > 0:
-                conf_id = conf_rows[0, 0]
-            else:
-                conf_id = None
-                
+        conf_id = conf_rows[0, 0] if conf_rows.shape[0] > 0 else None
+        
         # Initialize avg_seed as None
         avg_seed = None
                 
@@ -351,7 +340,7 @@ def analyze_team_performance(tournament_games, team_stats_df):
     logger.info(f"Analyzed performance for {len(team_results)} teams")
     return team_results
 
-def analyze_historical_trends(tournament_games, conference_results):
+def analyze_historical_trends(tournament_games, conference_results) -> dict:
     """
     Analyze historical trends in conference performance over time.
     
@@ -382,13 +371,13 @@ def analyze_historical_trends(tournament_games, conference_results):
             # Count home wins for the conference in this season
             home_wins = season_games.filter(
                 (pl.col('home_conference_id') == conf_id) & 
-                (pl.col('home_winner') == True)
+                pl.col('home_winner')
             ).shape[0]
             
             # Count away wins for the conference in this season
             away_wins = season_games.filter(
                 (pl.col('away_conference_id') == conf_id) & 
-                (pl.col('away_winner') == True)
+                pl.col('away_winner')
             ).shape[0]
             
             # Count total games played by the conference in this season
@@ -406,7 +395,7 @@ def analyze_historical_trends(tournament_games, conference_results):
     logger.info(f"Analyzed historical trends for {len(historical_trends)} conferences")
     return historical_trends
 
-def analyze_matchup_patterns(tournament_games, conference_results):
+def analyze_matchup_patterns(tournament_games, conference_results) -> pl.DataFrame:
     """
     Analyze patterns in conference matchups during tournaments.
     
@@ -421,9 +410,6 @@ def analyze_matchup_patterns(tournament_games, conference_results):
     
     # Initialize a list to store matchup results
     matchup_results = []
-    
-    # Get conference IDs and names
-    conf_ids = [data['conf_id'] for data in conference_results.values()]
     
     # For each pair of conferences, analyze their matchups
     for conf1_name, conf1_data in conference_results.items():
@@ -449,8 +435,8 @@ def analyze_matchup_patterns(tournament_games, conference_results):
             
             # Calculate conf1 wins
             conf1_wins = (
-                matchups_1_vs_2.filter(pl.col('home_winner') == True).shape[0] + 
-                matchups_2_vs_1.filter(pl.col('away_winner') == True).shape[0]
+                matchups_1_vs_2.filter(pl.col('home_winner')).shape[0] + 
+                matchups_2_vs_1.filter(pl.col('away_winner')).shape[0]
             )
             
             # Calculate total matchups
@@ -476,7 +462,7 @@ def analyze_matchup_patterns(tournament_games, conference_results):
     logger.info(f"Analyzed {len(matchup_results)} conference matchup patterns")
     return matchup_df
 
-def generate_visualizations(conference_results, team_results, historical_trends, matchup_df):
+def generate_visualizations(conference_results, team_results, historical_trends, matchup_df) -> dict:
     """
     Generate visualizations for the analysis.
     
@@ -584,7 +570,7 @@ def generate_visualizations(conference_results, team_results, historical_trends,
             for row in significant_matchups.rows(named=True):
                 unique_confs.add(row['conf1_name'])
                 unique_confs.add(row['conf2_name'])
-            unique_confs = sorted(list(unique_confs))
+            unique_confs = sorted(unique_confs)
             
             # Create matchup matrix
             matchup_matrix = []
@@ -619,7 +605,7 @@ def generate_visualizations(conference_results, team_results, historical_trends,
                 zmid=0.5,
                 text=matchup_matrix,
                 hoverinfo='text+x+y',
-                colorbar=dict(title='Win Rate')
+                colorbar={'title': 'Win Rate'}
             ))
             
             fig4.update_layout(
@@ -638,7 +624,7 @@ def generate_visualizations(conference_results, team_results, historical_trends,
     logger.info(f"Generated {len(vis_paths)} visualizations (PNG only)")
     return vis_paths
 
-def generate_report(conference_results, team_results, historical_trends, matchup_df, vis_paths):
+def generate_report(conference_results, team_results, historical_trends, matchup_df, vis_paths) -> str:
     """
     Generate a comprehensive markdown report of findings.
     
@@ -696,7 +682,7 @@ def generate_report(conference_results, team_results, historical_trends, matchup
     
     # Write the report
     with open(report_file, 'w') as f:
-        f.write(f"# NCAA Tournament Performance Analysis by Conference and Team\n\n")
+        f.write("# NCAA Tournament Performance Analysis by Conference and Team\n\n")
         f.write(f"*Analysis Date: {timestamp}*\n\n")
         
         f.write("## Executive Summary\n\n")
@@ -806,7 +792,7 @@ def generate_report(conference_results, team_results, historical_trends, matchup
     logger.info(f"Generated report at {report_file}")
     return report_file
 
-def main():
+def main() -> None:
     """
     Main function to execute the tournament performance analysis.
     """

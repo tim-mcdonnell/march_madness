@@ -630,7 +630,6 @@ def validate_with_year_awareness(
     
     # Try to extract year from filename
     if 'schedule' in filename and filename.endswith('.parquet'):
-        # Format: mbb_schedule_2024.parquet
         year_match = re.search(r'_(\d{4})\.parquet$', filename)
         if year_match:
             year = int(year_match.group(1))

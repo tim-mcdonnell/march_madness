@@ -311,7 +311,7 @@ The system validates configurations to ensure they're valid:
 
 If validation fails, the system will report specific errors.
 
-## Configuration Examples
+## Configuration Templates
 
 ### Quick Prediction
 

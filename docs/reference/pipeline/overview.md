@@ -1,10 +1,10 @@
 # Pipeline Architecture Overview
 
-This document provides a technical overview of the NCAA March Madness Predictor pipeline architecture.
+This document provides a comprehensive overview of the NCAA March Madness Predictor pipeline architecture, explaining both its conceptual structure and technical implementation.
 
-## Pipeline Framework
+## Pipeline Architecture
 
-The pipeline is implemented as a modular, configurable system with several key stages:
+The NCAA March Madness Predictor uses a modular pipeline architecture to process data, train models, and generate predictions. The pipeline is built around a series of stages that can be run independently or as a complete end-to-end workflow:
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -14,18 +14,24 @@ The pipeline is implemented as a modular, configurable system with several key s
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
-Each stage can be run independently or as part of the complete pipeline.
+Each stage is implemented as a separate module that can:
+- Be configured through the central YAML configuration
+- Be executed individually or as part of the full pipeline
+- Access outputs from previous stages
+- Produce well-defined outputs for subsequent stages
 
 ## Key Components
 
 ### 1. Configuration Management
 
-The pipeline uses a centralized configuration system that:
+The pipeline uses a centralized configuration system (`src/pipeline/config.py`) that:
 
 - Loads settings from YAML files
+- Validates configuration against required fields
+- Provides defaults for missing values
+- Can generate a default configuration if none exists
 - Supports command-line overrides
 - Provides environment variable integration
-- Enforces validation on configuration values
 
 ```python
 from src.utils.config import load_config
@@ -42,6 +48,8 @@ The pipeline includes utilities for:
 - Tracking dataset versions and lineage
 - Purging or archiving old data
 - Caching intermediate results
+- Directory structure enforcement
+- Consistent file path handling across the pipeline
 
 ```python
 from src.utils.paths import get_path
@@ -50,92 +58,9 @@ from src.utils.paths import get_path
 data_path = get_path("processed", "team_season_statistics.parquet")
 ```
 
-### 3. Pipeline Stages
+### 3. Command-Line Interface
 
-#### Data Stage
-
-The data stage:
-- Downloads raw data from sources
-- Validates data against schema definitions
-- Cleans and standardizes data
-- Processes data into normalized formats
-- Saves processed datasets
-
-```python
-from src.pipeline.data import run_data_stage
-
-# Run the data stage with configuration
-run_data_stage(config)
-```
-
-#### Exploratory Analysis Stage
-
-The exploratory analysis stage:
-- Generates statistical summaries
-- Creates visualization dashboards
-- Identifies patterns and outliers
-- Exports reports and visualizations
-
-```python
-from src.pipeline.exploratory import run_exploratory_stage
-
-# Run the exploratory analysis stage
-run_exploratory_stage(config)
-```
-
-#### Feature Engineering Stage
-
-The feature engineering stage:
-- Creates derived metrics and indicators
-- Implements domain-specific basketball metrics
-- Generates tournament-specific features
-- Performs feature selection
-- Exports features for modeling
-
-```python
-from src.pipeline.features import run_feature_stage
-
-# Run the feature engineering stage
-run_feature_stage(config)
-```
-
-#### Model Training Stage
-
-The model training stage:
-- Prepares training and validation datasets
-- Trains predictive models
-- Optimizes hyperparameters
-- Saves trained models
-- Records training metadata
-
-```python
-from src.pipeline.model import run_model_stage
-
-# Run the model training stage
-run_model_stage(config)
-```
-
-#### Evaluation & Prediction Stage
-
-The evaluation and prediction stage:
-- Evaluates model performance
-- Generates tournament predictions
-- Creates bracket visualizations
-- Performs sensitivity analysis
-- Exports prediction results
-
-```python
-from src.pipeline.evaluation import run_evaluation_stage
-from src.pipeline.predict import run_prediction_stage
-
-# Run evaluation and prediction stages
-run_evaluation_stage(config)
-run_prediction_stage(config)
-```
-
-### 4. Command-Line Interface
-
-The pipeline provides a comprehensive CLI:
+The pipeline can be controlled through a flexible CLI (`src/pipeline/cli.py`) that offers:
 
 ```
 python -m src.pipeline.main [OPTIONS]
@@ -151,9 +76,103 @@ Options:
   --help                        Show this message and exit
 ```
 
+### 4. Pipeline Stages
+
+#### Data Stage
+
+The data stage (`src/pipeline/data_stage.py`):
+- Downloads NCAA basketball data from the hoopR-mbb-data repository
+- Organizes data by year and category
+- Implements smart caching to avoid redundant downloads
+- Validates data against schema definitions
+- Cleans and standardizes data
+- Processes data into normalized formats
+- Saves processed datasets
+- Provides data loading functions for subsequent stages
+
+```python
+from src.pipeline.data import run_data_stage
+
+# Run the data stage with configuration
+run_data_stage(config)
+```
+
+#### Exploratory Analysis Stage
+
+The exploratory analysis stage:
+- Generates statistical summaries of the data
+- Creates visualization dashboards
+- Identifies patterns and outliers
+- Exports reports and visualizations
+- Identify correlations between variables
+- Produce reports for data understanding
+
+```python
+from src.pipeline.exploratory import run_exploratory_stage
+
+# Run the exploratory analysis stage
+run_exploratory_stage(config)
+```
+
+#### Feature Engineering Stage
+
+The feature engineering stage:
+- Creates derived metrics and indicators
+- Implements domain-specific basketball metrics
+- Transforms raw data into predictive features
+- Calculate advanced basketball metrics
+- Generate team performance indicators
+- Creates feature matrices for model training
+- Performs feature selection
+- Exports features for modeling
+
+```python
+from src.pipeline.features import run_feature_stage
+
+# Run the feature engineering stage
+run_feature_stage(config)
+```
+
+#### Model Training Stage
+
+The model training stage:
+- Prepares training and validation datasets
+- Trains predictive models on historical data
+- Optimizes hyperparameters
+- Implements various model architectures
+- Creates model persistence functionality
+- Saves trained models
+- Records training metadata
+
+```python
+from src.pipeline.model import run_model_stage
+
+# Run the model training stage
+run_model_stage(config)
+```
+
+#### Evaluation & Prediction Stage
+
+The evaluation and prediction stage:
+- Assesses model performance on test data
+- Generates tournament predictions
+- Creates bracket visualizations
+- Performs sensitivity analysis
+- Exports prediction results
+- Simulates tournament brackets
+
+```python
+from src.pipeline.evaluation import run_evaluation_stage
+from src.pipeline.predict import run_prediction_stage
+
+# Run evaluation and prediction stages
+run_evaluation_stage(config)
+run_prediction_stage(config)
+```
+
 ## Pipeline Flow
 
-The typical flow through the pipeline is:
+The main pipeline script (`run_pipeline.py`) orchestrates the flow:
 
 1. **Configuration Loading**: Load and validate configuration
 2. **Stage Selection**: Determine which stages to run
@@ -214,7 +233,15 @@ logger.warning("Missing data for %s", team_id)
 logger.error("Failed to process %s", dataset_name)
 ```
 
-## Examples
+## CI/CD Integration
+
+The pipeline is integrated with GitHub Actions for continuous integration and deployment:
+- Scheduled runs during basketball season
+- Manual execution via workflow dispatch
+- Data caching for efficiency
+- Results logging and artifact storage
+
+## Command Examples
 
 ### Running the Full Pipeline
 
@@ -240,10 +267,21 @@ python -m src.pipeline.main --config configs/research_config.yml
 python -m src.pipeline.main --years 2022,2023,2024
 ```
 
+### Running with Specific Data Filters
+
+```bash
+python -m src.pipeline.main --years 2023 2024 --categories team_box player_box
+```
+
+### Cleaning Data Before Running
+
+```bash
+python -m src.pipeline.main --clean-raw
+```
+
 ## Related Documentation
 
-- [Pipeline Usage Guide](../../user_guide/pipeline_usage.md): Detailed usage instructions
+- [Pipeline Usage Guide](../../user_guide/pipeline_usage.md): Task-oriented guide for using the pipeline
 - [Configuration Guide](../../user_guide/configuration.md): Configuration options and examples
 - [Data Processing](../data/processing.md): Details on data processing procedures
-- [Feature Engineering](../../examples/feature_engineering.md): Examples of feature engineering
 - [Model Development](../models/overview.md): Information on model development 

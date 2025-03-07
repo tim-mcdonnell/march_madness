@@ -53,13 +53,11 @@ def main() -> int:
     try:
         # Create default config if requested or if it doesn't exist
         config_path = args.config
-        config_created = False
         
         if args.create_config:
             logger.info(f"Creating default configuration at {config_path}")
             create_default_config(config_path)
             logger.info(f"Default configuration created at {config_path}")
-            config_created = True
             
             # Exit if user just wants to create config without running
             if args.no_run:
@@ -76,7 +74,6 @@ def main() -> int:
             create_default_config(config_path)
             config = load_config(config_path)
             logger.info(f"Created and loaded default configuration at {config_path}")
-            config_created = True
         
         # Process arguments and run pipeline
         results = process_args(args, config)

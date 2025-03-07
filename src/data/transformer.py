@@ -121,10 +121,7 @@ def load_cleaned_data(
     
     for year in years:
         # Handle different file naming patterns
-        if category == "schedules":
-            file_name = f"mbb_schedule_{year}.parquet"
-        else:
-            file_name = f"{category}_{year}.parquet"
+        file_name = f"mbb_schedule_{year}.parquet" if category == "schedules" else f"{category}_{year}.parquet"
             
         file_path = data_dir / category / file_name
         
@@ -457,6 +454,10 @@ def create_team_season_statistics(
             .otherwise(pl.col("points_per_game"))
             .alias("points_per_game")
         )
+    
+    # Filter to include only teams that appear in team_box_data
+    team_ids_in_box_data = team_box_data["team_id"].unique().to_list()
+    team_season_stats = team_season_stats.filter(pl.col("team_id").is_in(team_ids_in_box_data))
     
     # Save to file if output path provided
     if output_path:
