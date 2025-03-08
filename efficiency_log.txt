@@ -1,0 +1,44 @@
+2025-03-08 13:51:10,091 - __main__ - INFO - Generating efficiency features
+2025-03-08 13:51:10,091 - __main__ - INFO - Loading team_season_stats from data/processed/team_season_statistics.parquet
+2025-03-08 13:51:10,110 - __main__ - INFO - Loading team_box from data/processed/team_box.parquet
+2025-03-08 13:51:10,123 - __main__ - INFO - Loading schedules from data/processed/schedules.parquet
+2025-03-08 13:51:10,141 - __main__ - INFO - Loading team_performance from data/features/team_performance.parquet
+2025-03-08 13:51:10,143 - __main__ - INFO - Building features using efficiency builder
+2025-03-08 13:51:10,143 - src.features.builders.efficiency - INFO - Calculating raw efficiency metrics
+2025-03-08 13:51:10,143 - src.features.builders.efficiency - INFO - Estimating possessions from box score data
+2025-03-08 13:51:10,178 - src.features.builders.efficiency - INFO - Calculated raw efficiency metrics for 8866 teams
+2025-03-08 13:51:10,179 - src.features.builders.efficiency - INFO - Calculating raw tempo metrics
+2025-03-08 13:51:10,179 - src.features.builders.efficiency - INFO - Estimating possessions from box score data
+2025-03-08 13:51:10,179 - src.features.builders.efficiency - INFO - Using default 40 minutes per game for tempo calculation
+2025-03-08 13:51:10,189 - src.features.builders.efficiency - INFO - Calculated raw tempo metrics for 12839 teams
+2025-03-08 13:51:10,189 - src.features.builders.efficiency - INFO - Calculating adjusted metrics with 5 iterations
+2025-03-08 13:51:10,223 - src.features.builders.efficiency - INFO - Using 115652 games for adjusting ratings
+2025-03-08 13:51:10,344 - src.features.builders.efficiency - INFO - Completed iteration 1 of rating adjustments
+2025-03-08 13:51:10,462 - src.features.builders.efficiency - INFO - Completed iteration 2 of rating adjustments
+2025-03-08 13:51:10,580 - src.features.builders.efficiency - INFO - Completed iteration 3 of rating adjustments
+2025-03-08 13:51:10,698 - src.features.builders.efficiency - INFO - Completed iteration 4 of rating adjustments
+2025-03-08 13:51:10,815 - src.features.builders.efficiency - INFO - Completed iteration 5 of rating adjustments
+2025-03-08 13:51:10,821 - src.features.builders.efficiency - INFO - Calculated adjusted metrics for 8866 teams
+2025-03-08 13:51:10,822 - src.features.builders.efficiency - INFO - Calculating strength of schedule metrics
+
+2025-03-08 13:56:40,076 - src.features.builders.efficiency - INFO - Calculated strength of schedule for 8864 teams
+2025-03-08 13:56:40,094 - src.features.builders.efficiency - INFO - Calculating tournament experience metrics
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/timothymcdonnell/projects/march_madness/src/features/generate.py", line 193, in <module>
+    main() 
+    ^^^^^^
+  File "/Users/timothymcdonnell/projects/march_madness/src/features/generate.py", line 182, in main
+    output_path = generate_features(
+                  ^^^^^^^^^^^^^^^^^^
+  File "/Users/timothymcdonnell/projects/march_madness/src/features/generate.py", line 79, in generate_features
+    features = feature_builder.build_features(**build_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/timothymcdonnell/projects/march_madness/src/features/builders/efficiency.py", line 84, in build_features
+    tournament_exp = self._calculate_tournament_experience(schedules)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/timothymcdonnell/projects/march_madness/src/features/builders/efficiency.py", line 571, in _calculate_tournament_experience
+    .filter(pl.col("season_type").str.contains("postseason|NCAA|tournament", ignore_case=True))
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ExprStringNameSpace.contains() got an unexpected keyword argument 'ignore_case'

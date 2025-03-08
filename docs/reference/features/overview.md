@@ -30,7 +30,6 @@ The complexity score (1-5) indicates the anticipated implementation difficulty:
 - [ ] **Kill Shots Margin** - [4] Difference between team's kill shots and opponents'
 - [ ] **Clutch Performance** - [4] Performance in close games (last 5 minutes, margin ≤ 5 points)
 - [x] **Home Court Advantage** - [2] Rating of how much better a team performs at home
-- [ ] **Performance by Half** - [3] First half vs. second half performance metrics
 - [ ] **Tournament Experience** - [3] Previous NCAA tournament experience metric
 
 ## Shooting and Scoring Metrics
@@ -151,8 +150,7 @@ This comprehensive approach ensures:
 1. Team Offensive/Defensive Efficiency Ratings
 2. True Tempo 
 3. Strength of Schedule
-4. Performance by Half metrics
-5. Tournament Experience metric
+4. Tournament Experience metric
 
 **Implementation Approach:**
 1. Calculate raw offensive/defensive efficiency ratings
