@@ -46,6 +46,16 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
         # Start with the base dataset
         features = team_season_stats.clone()
         
+        # Load schedules data to get accurate neutral site information
+        try:
+            schedules = pl.read_parquet("data/processed/schedules.parquet")
+        except Exception as e:
+            # If schedules data cannot be loaded, log a warning and continue without it
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Could not load schedules data: {e}. Neutral site win percentage may be inaccurate.")
+            schedules = None
+        
         # Generate shooting metrics
         shooting_metrics = self._calculate_shooting_metrics(team_box)
         
@@ -53,7 +63,7 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
         possession_metrics = self._calculate_possession_metrics(team_box)
         
         # Generate win percentage breakdowns
-        win_pct_metrics = self._calculate_win_percentage_breakdowns(team_box)
+        win_pct_metrics = self._calculate_win_percentage_breakdowns(team_box, schedules)
         
         # Generate recent form and consistency metrics
         form_metrics = self._calculate_form_metrics(team_box)
@@ -172,7 +182,11 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
             ])
         )
     
-    def _calculate_win_percentage_breakdowns(self, team_box: pl.DataFrame) -> pl.DataFrame:
+    def _calculate_win_percentage_breakdowns(
+        self, 
+        team_box: pl.DataFrame, 
+        schedules: pl.DataFrame | None
+    ) -> pl.DataFrame:
         """Calculate win percentage breakdowns for each team and season.
         
         Includes:
@@ -180,16 +194,42 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
         
         Args:
             team_box: Team box scores DataFrame
+            schedules: Schedules DataFrame
             
         Returns:
             DataFrame with win percentage breakdowns by team and season
         """
         # For each game location (home, away, neutral), calculate wins and games played
+        if schedules is None:
+            # If schedules data is not available, use the old method (less accurate)
+            is_neutral = (pl.col("team_home_away") != "home").and_(pl.col("team_home_away") != "away")
+        else:
+            # Extract just the columns we need from schedules
+            neutral_info = schedules.select(
+                ["game_id", "neutral_site"]
+            )
+            
+            # Join team_box with schedules to get accurate neutral site information
+            team_box = team_box.join(
+                neutral_info,
+                on="game_id",
+                how="left"
+            )
+            
+            # If neutral_site is null (couldn't find in schedules), use the old method
+            team_box = team_box.with_columns(
+                pl.when(pl.col("neutral_site").is_null())
+                  .then((pl.col("team_home_away") != "home").and_(pl.col("team_home_away") != "away"))
+                  .otherwise(pl.col("neutral_site"))
+                  .alias("neutral_site")
+            )
+            
+            # Use the neutral_site column from schedules
+            is_neutral = pl.col("neutral_site")
+        
         return (
             team_box
             .with_columns([
-                # Add a neutral column (neither home nor away)
-                (pl.col("team_home_away") != "home").and_(pl.col("team_home_away") != "away").alias("neutral_site"),
                 # Convert team_winner to numeric
                 pl.col("team_winner").cast(pl.Int32).alias("win")
             ])
@@ -197,35 +237,35 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
             .agg([
                 # Home win percentage (non-neutral home games)
                 pl.col("win")
-                  .filter((pl.col("team_home_away") == "home") & (~pl.col("neutral_site")))
+                  .filter((pl.col("team_home_away") == "home") & (~is_neutral))
                   .mean()
                   .alias("home_win_pct_detailed"),
                 
                 # Away win percentage (non-neutral away games)
                 pl.col("win")
-                  .filter((pl.col("team_home_away") == "away") & (~pl.col("neutral_site")))
+                  .filter((pl.col("team_home_away") == "away") & (~is_neutral))
                   .mean()
                   .alias("away_win_pct_detailed"),
                 
                 # Neutral site win percentage
                 pl.col("win")
-                  .filter(pl.col("neutral_site"))
+                  .filter(is_neutral)
                   .mean()
                   .alias("neutral_win_pct"),
                 
                 # Games played by location
                 pl.col("win")
-                  .filter((pl.col("team_home_away") == "home") & (~pl.col("neutral_site")))
+                  .filter((pl.col("team_home_away") == "home") & (~is_neutral))
                   .count()
                   .alias("home_games_played"),
                 
                 pl.col("win")
-                  .filter((pl.col("team_home_away") == "away") & (~pl.col("neutral_site")))
+                  .filter((pl.col("team_home_away") == "away") & (~is_neutral))
                   .count()
                   .alias("away_games_played"),
                 
                 pl.col("win")
-                  .filter(pl.col("neutral_site"))
+                  .filter(is_neutral)
                   .count()
                   .alias("neutral_games_played"),
             ])

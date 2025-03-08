@@ -90,6 +90,8 @@ data/features/             - Generated feature files
 └── team_performance.parquet  - Combined foundation features
 ```
 
+> **Note:** The foundation features are saved as `team_performance.parquet`. This naming convention reflects the fact that these features represent the core team performance metrics.
+
 ## Next Steps
 
 Future feature development will focus on:
