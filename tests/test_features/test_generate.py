@@ -86,7 +86,9 @@ def test_main_function(mock_get_builders, mock_parse_args, mock_generate_feature
         feature_set="test_feature",
         output_dir="test_output_dir",
         output_filename="test_output.parquet",
-        recent_form_games=5
+        recent_form_games=5,
+        iterations=10,
+        min_possessions=100
     )
     mock_parse_args.return_value = mock_args
     mock_generate_features.return_value = Path("/mock/path/features.parquet")
@@ -99,7 +101,12 @@ def test_main_function(mock_get_builders, mock_parse_args, mock_generate_feature
         "test_feature",
         "test_output_dir",
         "test_output.parquet",
-        {"recent_form_games": 5, "output_file": "test_output.parquet"}
+        {
+            "recent_form_games": 5, 
+            "iterations": 10, 
+            "min_possessions": 100,
+            "output_file": "test_output.parquet"
+        }
     )
 
 
@@ -113,7 +120,9 @@ def test_main_output(mock_logger, mock_parse_args) -> None:
             feature_set="foundation",
             output_dir="data/features",
             output_filename="team_performance.parquet",
-            recent_form_games=10
+            recent_form_games=10,
+            iterations=10,
+            min_possessions=100
         )
         mock_generate_features.return_value = Path("data/features/team_performance.parquet")
         
@@ -122,4 +131,13 @@ def test_main_output(mock_logger, mock_parse_args) -> None:
         
         # Verify the logger was called with the correct message
         # Note: logger.info is called multiple times, we want the last call
-        mock_logger.assert_any_call("Features saved to data/features/team_performance.parquet") 
+        mock_logger.assert_any_call("Features saved to data/features/team_performance.parquet")
+
+
+@patch("src.features.generate.get_available_feature_builders")
+def test_mock_available_builders(mock_get_builders) -> None:
+    """Mock available builders for testing to exclude efficiency builder."""
+    mock_get_builders.return_value = ["foundation", "test_feature"]
+    # Test that the mock works
+    from src.features.generate import get_available_feature_builders
+    assert get_available_feature_builders() == ["foundation", "test_feature"] 

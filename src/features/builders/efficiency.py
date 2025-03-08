@@ -11,9 +11,7 @@ that require iteration and opponent-adjusted calculations.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
 
-import numpy as np
 import polars as pl
 
 from src.features.base import BaseFeatureBuilder
@@ -29,7 +27,7 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         Args:
             config: Configuration parameters including:
                 - iterations: Number of iterations for adjusting ratings (default: 10)
-                - output_file: Name of the output file (default: team_efficiency.parquet)
+                - output_file: Name of the output file (default: team_performance.parquet)
                 - min_possessions: Minimum possessions for reliability (default: 100)
                 - league_average_oe: League average offensive efficiency (default: 100)
                 - league_average_de: League average defensive efficiency (default: 100)
@@ -38,7 +36,7 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         super().__init__(config)
         self.name = "efficiency"
         self.iterations = self.config.get("iterations", 10)
-        self.output_file = self.config.get("output_file", "team_efficiency.parquet")
+        self.output_file = self.config.get("output_file", "team_performance.parquet")
         self.min_possessions = self.config.get("min_possessions", 100)
         self.league_average_oe = self.config.get("league_average_oe", 100)
         self.league_average_de = self.config.get("league_average_de", 100)
@@ -111,8 +109,6 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         if "possessions" not in team_box.columns:
             logger.info("Estimating possessions from box score data")
             
-            # Calculate possessions using the standard formula
-            # Poss = FGA - ORB + TO + (0.44 * FTA)
             team_box = team_box.with_columns([
                 (
                     pl.col("field_goals_attempted") - pl.col("offensive_rebounds") + 
@@ -165,8 +161,6 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         if "possessions" not in team_box.columns:
             logger.info("Estimating possessions from box score data")
             
-            # Calculate possessions using the standard formula
-            # Poss = FGA - ORB + TO + (0.44 * FTA)
             team_box = team_box.with_columns([
                 (
                     pl.col("field_goals_attempted") - pl.col("offensive_rebounds") + 
@@ -264,7 +258,8 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                 team_id: float(o_rtg)
                 for team_id, o_rtg in zip(
                     season_teams.select("team_id").to_series().to_list(),
-                    season_teams.select("raw_offensive_efficiency").to_series().to_list()
+                    season_teams.select("raw_offensive_efficiency").to_series().to_list(),
+                    strict=True
                 )
             }
             
@@ -272,7 +267,8 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                 team_id: float(d_rtg)
                 for team_id, d_rtg in zip(
                     season_teams.select("team_id").to_series().to_list(),
-                    season_teams.select("raw_defensive_efficiency").to_series().to_list()
+                    season_teams.select("raw_defensive_efficiency").to_series().to_list(),
+                    strict=True
                 )
             }
             
@@ -280,7 +276,8 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                 team_id: float(tempo)
                 for team_id, tempo in zip(
                     season_teams.select("team_id").to_series().to_list(),
-                    season_teams.select("raw_tempo").to_series().to_list()
+                    season_teams.select("raw_tempo").to_series().to_list(),
+                    strict=True
                 )
             }
         
@@ -324,9 +321,9 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                 season_games = valid_games.filter(pl.col("season") == season)
                 
                 # Create dictionaries to accumulate opponent-adjusted values
-                o_adj_values = {team_id: [] for team_id in offensive_ratings[season].keys()}
-                d_adj_values = {team_id: [] for team_id in defensive_ratings[season].keys()}
-                tempo_adj_values = {team_id: [] for team_id in tempo_ratings[season].keys()}
+                o_adj_values = {team_id: [] for team_id in offensive_ratings[season]}
+                d_adj_values = {team_id: [] for team_id in defensive_ratings[season]}
+                tempo_adj_values = {team_id: [] for team_id in tempo_ratings[season]}
                 
                 # Process each game
                 for game in season_games.to_dicts():
@@ -366,7 +363,7 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                     tempo_adj_values[away_id].append(away_tempo_adj)
                 
                 # Calculate new ratings based on opponent adjustments
-                for team_id in offensive_ratings[season].keys():
+                for team_id in offensive_ratings[season]:
                     if team_id in o_adj_values and o_adj_values[team_id]:
                         new_offensive_ratings[season][team_id] = sum(o_adj_values[team_id]) / len(o_adj_values[team_id])
                     else:
@@ -379,7 +376,9 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                         new_defensive_ratings[season][team_id] = defensive_ratings[season][team_id]
                         
                     if team_id in tempo_adj_values and tempo_adj_values[team_id]:
-                        new_tempo_ratings[season][team_id] = sum(tempo_adj_values[team_id]) / len(tempo_adj_values[team_id])
+                        new_tempo_ratings[season][team_id] = (
+                            sum(tempo_adj_values[team_id]) / len(tempo_adj_values[team_id])
+                        )
                     else:
                         new_tempo_ratings[season][team_id] = tempo_ratings[season][team_id]
             
@@ -393,7 +392,7 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         # Convert adjusted ratings back to a DataFrame
         adjusted_ratings_data = []
         for season in seasons:
-            for team_id in offensive_ratings[season].keys():
+            for team_id in offensive_ratings[season]:
                 adjusted_ratings_data.append({
                     "team_id": team_id,
                     "season": season,
@@ -438,14 +437,18 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                 "net": row["net_rating"]
             }
         
-        # Calculate strength of schedule for each team and season
-        sos_data = []
-        
         # Group games by team and season
         team_schedules = []
         
         for team_id in adjusted_metrics.select("team_id").unique().to_series().to_list():
-            for season in adjusted_metrics.filter(pl.col("team_id") == team_id).select("season").unique().to_series().to_list():
+            seasons = (adjusted_metrics
+                      .filter(pl.col("team_id") == team_id)
+                      .select("season")
+                      .unique()
+                      .to_series()
+                      .to_list())
+            
+            for season in seasons:
                 # Get all games for this team in this season
                 # For home games, the away team is the opponent
                 home_games = schedules.filter(
@@ -489,7 +492,14 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
             sos_records = []
             
             for team_id in adjusted_metrics.select("team_id").unique().to_series().to_list():
-                for season in adjusted_metrics.filter(pl.col("team_id") == team_id).select("season").unique().to_series().to_list():
+                seasons = (adjusted_metrics
+                          .filter(pl.col("team_id") == team_id)
+                          .select("season")
+                          .unique()
+                          .to_series()
+                          .to_list())
+                
+                for season in seasons:
                     # Get all opponents for this team in this season
                     team_games = all_team_schedules.filter(
                         (pl.col("team_id") == team_id) & 
@@ -580,7 +590,9 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
                     .filter(pl.col("season_type").str.contains("(?i)postseason|(?i)NCAA|(?i)tournament"))
                     .select("game_id", "season", "home_id", "away_id")
                 )
-            elif isinstance(schema["season_type"], (pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64)):
+            elif isinstance(schema["season_type"], 
+                          pl.Int8 | pl.Int16 | pl.Int32 | pl.Int64 | 
+                          pl.UInt8 | pl.UInt16 | pl.UInt32 | pl.UInt64):
                 logger.info("'season_type' column is integer, assuming 3 = postseason")
                 # Some datasets use numeric codes for season types, often 3 = postseason
                 tournament_games = (
@@ -613,7 +625,14 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
             # Create tournament experience records for all teams in each season
             tournament_exp_data = []
             for season in schedules.select("season").unique().to_series().to_list():
-                for team_id in schedules.filter(pl.col("season") == season).select("home_id").unique().to_series().to_list():
+                home_teams = (schedules
+                            .filter(pl.col("season") == season)
+                            .select("home_id")
+                            .unique()
+                            .to_series()
+                            .to_list())
+                
+                for team_id in home_teams:
                     prev_seasons = [s for s in seasons_by_team.get(team_id, set()) if s < season]
                     tournament_exp_data.append({
                         "team_id": team_id,

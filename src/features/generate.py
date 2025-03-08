@@ -169,12 +169,9 @@ def main() -> None:
     # Set default output filename based on feature set if not provided
     output_filename = args.output_filename
     if output_filename is None:
-        if args.feature_set == "foundation":
-            output_filename = "team_performance.parquet"
-        elif args.feature_set == "efficiency":
-            output_filename = "team_efficiency.parquet"
-        else:
-            output_filename = f"{args.feature_set}.parquet"
+        # Always use team_performance.parquet as the default output file
+        # to maintain a single consolidated features file
+        output_filename = "team_performance.parquet"
     
     config["output_file"] = output_filename
     
