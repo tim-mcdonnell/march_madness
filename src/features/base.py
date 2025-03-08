@@ -18,7 +18,7 @@ class BaseFeatureBuilder:
         Args:
             config: Configuration parameters for the feature builder
         """
-        self.config = config or {}
+        self.config = dict(config or {})  # Make a copy of the config
         self.name = "base"
         
     def build_features(self, *args: pl.DataFrame) -> pl.DataFrame:
