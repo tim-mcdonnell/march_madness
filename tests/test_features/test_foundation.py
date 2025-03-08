@@ -1,16 +1,16 @@
 """Tests for the foundation feature builder."""
 
-import pytest
-import polars as pl
-import numpy as np
-from pathlib import Path
 from datetime import date
+from pathlib import Path
+
+import polars as pl
+import pytest
 
 from src.features.builders.foundation import FoundationFeatureBuilder
 
 
 @pytest.fixture
-def sample_team_season_stats():
+def sample_team_season_stats() -> pl.DataFrame:
     """Create a sample team season stats DataFrame for testing."""
     return pl.DataFrame({
         "team_id": [1, 2, 3, 4],
@@ -36,7 +36,7 @@ def sample_team_season_stats():
 
 
 @pytest.fixture
-def sample_team_box():
+def sample_team_box() -> pl.DataFrame:
     """Create a sample team box score DataFrame for testing."""
     # Create a consistent set of data for 4 teams and multiple games
     team_ids = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4]
@@ -62,7 +62,7 @@ def sample_team_box():
     
     # Win/loss
     team_winners = [score_team > score_opp for score_team, score_opp 
-                   in zip(team_scores, opponent_scores)]
+                   in zip(team_scores, opponent_scores, strict=True)]
     
     # Field goal stats
     fga = [70, 65, 75, 65, 70, 60, 60, 65, 70, 75, 60, 65]
@@ -114,14 +114,14 @@ def sample_team_box():
         "steals": stl,
         "blocks": blk,
         # Add necessary fields for field goal percentages
-        "field_goal_pct": [m/a for m, a in zip(fgm, fga)],
-        "three_point_field_goal_pct": [m/a for m, a in zip(tpm, tpa)],
-        "free_throw_pct": [m/a for m, a in zip(ftm, fta)]
+        "field_goal_pct": [m/a for m, a in zip(fgm, fga, strict=True)],
+        "three_point_field_goal_pct": [m/a for m, a in zip(tpm, tpa, strict=True)],
+        "free_throw_pct": [m/a for m, a in zip(ftm, fta, strict=True)]
     })
 
 
 @pytest.fixture
-def sample_schedules():
+def sample_schedules() -> pl.DataFrame:
     """Create a sample schedules DataFrame with neutral site information."""
     game_ids = [101, 102, 103, 104, 105, 106]
     neutral_sites = [False, True, False, False, True, True]
@@ -133,12 +133,12 @@ def sample_schedules():
 
 
 @pytest.fixture
-def temp_output_dir(tmp_path):
+def temp_output_dir(tmp_path) -> Path:
     """Create a temporary directory for test outputs."""
     return tmp_path / "features"
 
 
-def test_foundation_feature_builder_init():
+def test_foundation_feature_builder_init() -> None:
     """Test the initialization of the FoundationFeatureBuilder."""
     # Test with default config
     builder = FoundationFeatureBuilder()
@@ -156,7 +156,7 @@ def test_foundation_feature_builder_init():
     assert builder.output_file == "custom_output.parquet"
 
 
-def test_calculate_shooting_metrics(sample_team_box):
+def test_calculate_shooting_metrics(sample_team_box) -> None:
     """Test the calculation of shooting metrics."""
     builder = FoundationFeatureBuilder()
     result = builder._calculate_shooting_metrics(sample_team_box)
@@ -178,7 +178,7 @@ def test_calculate_shooting_metrics(sample_team_box):
     assert 0.2 <= team_1_metrics["ft_rate"][0] <= 0.5  # Typical FT rate
 
 
-def test_calculate_possession_metrics(sample_team_box):
+def test_calculate_possession_metrics(sample_team_box) -> None:
     """Test the calculation of possession metrics."""
     builder = FoundationFeatureBuilder()
     result = builder._calculate_possession_metrics(sample_team_box)
@@ -203,7 +203,7 @@ def test_calculate_possession_metrics(sample_team_box):
     assert 1.0 <= team_1_metrics["ast_to_tov_ratio"][0] <= 3.0  # Typical A/TO ratio
 
 
-def test_calculate_win_percentage_breakdowns(sample_team_box):
+def test_calculate_win_percentage_breakdowns(sample_team_box) -> None:
     """Test the calculation of win percentage breakdowns."""
     builder = FoundationFeatureBuilder()
     result = builder._calculate_win_percentage_breakdowns(sample_team_box)
@@ -240,7 +240,7 @@ def test_calculate_win_percentage_breakdowns(sample_team_box):
     assert team_1["away_games_played"][0] == away_games_count
 
 
-def test_calculate_form_metrics(sample_team_box):
+def test_calculate_form_metrics(sample_team_box) -> None:
     """Test the calculation of form metrics."""
     builder = FoundationFeatureBuilder({"recent_form_games": 2})
     result = builder._calculate_form_metrics(sample_team_box)
@@ -264,7 +264,7 @@ def test_calculate_form_metrics(sample_team_box):
     # For team 1, the last two games were a loss and a win
     recent_games = sample_team_box.filter(pl.col("team_id") == 1).sort("game_date").tail(2)
     recent_point_diffs = [score - opp for score, opp in zip(recent_games["team_score"].to_list(), 
-                                                           recent_games["opponent_team_score"].to_list())]
+                                                           recent_games["opponent_team_score"].to_list(), strict=True)]
     recent_wins = recent_games["team_winner"].to_list()
     
     # The weighted average should be somewhere between the values but closer to the most recent
@@ -272,7 +272,7 @@ def test_calculate_form_metrics(sample_team_box):
     assert min(recent_wins) <= team_1["recent_win_pct"][0] <= max(recent_wins)
 
 
-def test_calculate_home_court_advantage(sample_team_box):
+def test_calculate_home_court_advantage(sample_team_box) -> None:
     """Test the calculation of home court advantage metrics."""
     builder = FoundationFeatureBuilder()
     result = builder._calculate_home_court_advantage(sample_team_box)
@@ -292,9 +292,9 @@ def test_calculate_home_court_advantage(sample_team_box):
     away_games = sample_team_box.filter((pl.col("team_id") == 1) & (pl.col("team_home_away") == "away"))
     
     home_margins = [(score - opp) for score, opp in zip(home_games["team_score"].to_list(), 
-                                                      home_games["opponent_team_score"].to_list())]
+                                                      home_games["opponent_team_score"].to_list(), strict=True)]
     away_margins = [(score - opp) for score, opp in zip(away_games["team_score"].to_list(), 
-                                                      away_games["opponent_team_score"].to_list())]
+                                                      away_games["opponent_team_score"].to_list(), strict=True)]
     
     avg_home_margin = sum(home_margins) / len(home_margins) if home_margins else 0
     avg_away_margin = sum(away_margins) / len(away_margins) if away_margins else 0
@@ -304,7 +304,7 @@ def test_calculate_home_court_advantage(sample_team_box):
     assert abs(team_1["home_court_advantage"][0] - expected_advantage) < 0.01
 
 
-def test_build_features(sample_team_season_stats, sample_team_box):
+def test_build_features(sample_team_season_stats, sample_team_box) -> None:
     """Test the complete feature building process."""
     builder = FoundationFeatureBuilder({"recent_form_games": 2})
     result = builder.build_features(sample_team_season_stats, sample_team_box)
@@ -333,7 +333,7 @@ def test_build_features(sample_team_season_stats, sample_team_box):
     assert team_1["home_games_played"][0] == 2  # From new data
 
 
-def test_save_features(sample_team_season_stats, sample_team_box, temp_output_dir):
+def test_save_features(sample_team_season_stats, sample_team_box, temp_output_dir) -> None:
     """Test saving features to a parquet file."""
     # Create the output directory
     temp_output_dir.mkdir(parents=True, exist_ok=True)

@@ -1,16 +1,17 @@
 """Tests for the feature generation module."""
 
-import pytest
-import polars as pl
-from pathlib import Path
 import argparse
-from unittest.mock import patch, MagicMock
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import polars as pl
+import pytest
 
 from src.features.generate import generate_features, main
 
 
 @pytest.fixture
-def mock_feature_builder():
+def mock_feature_builder() -> MagicMock:
     """Create a mock feature builder."""
     mock_builder = MagicMock()
     mock_builder.build_features.return_value = pl.DataFrame({
@@ -23,7 +24,7 @@ def mock_feature_builder():
 
 
 @pytest.fixture
-def mock_data():
+def mock_data() -> tuple[pl.DataFrame, pl.DataFrame]:
     """Create mock data for testing."""
     team_season_stats = pl.DataFrame({
         "team_id": [1, 2, 3],
@@ -43,7 +44,7 @@ def mock_data():
 
 @patch("src.features.generate.create_feature_builder")
 @patch("src.features.generate.pl.read_parquet")
-def test_generate_features(mock_read_parquet, mock_create_builder, mock_feature_builder, mock_data):
+def test_generate_features(mock_read_parquet, mock_create_builder, mock_feature_builder, mock_data) -> None:
     """Test the generate_features function."""
     team_season_stats, team_box = mock_data
     
@@ -77,7 +78,7 @@ def test_generate_features(mock_read_parquet, mock_create_builder, mock_feature_
 @patch("src.features.generate.generate_features")
 @patch("src.features.generate.argparse.ArgumentParser.parse_args")
 @patch("src.features.generate.get_available_feature_builders")
-def test_main_function(mock_get_builders, mock_parse_args, mock_generate_features):
+def test_main_function(mock_get_builders, mock_parse_args, mock_generate_features) -> None:
     """Test the main function."""
     # Configure mocks
     mock_get_builders.return_value = ["foundation", "test_feature"]
@@ -104,7 +105,7 @@ def test_main_function(mock_get_builders, mock_parse_args, mock_generate_feature
 
 @patch("src.features.generate.argparse.ArgumentParser.parse_args")
 @patch("src.features.generate.logger.info")
-def test_main_output(mock_logger, mock_parse_args):
+def test_main_output(mock_logger, mock_parse_args) -> None:
     """Test the output message of the main function."""
     with patch("src.features.generate.generate_features") as mock_generate_features:
         # Configure mocks

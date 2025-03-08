@@ -1,33 +1,32 @@
 """Tests for the feature factory module."""
 
-import pytest
-from unittest.mock import MagicMock
 import polars as pl
+import pytest
 
 from src.features.base import BaseFeatureBuilder
 from src.features.factory import (
-    register_feature_builder,
+    FEATURE_BUILDERS,
     create_feature_builder,
     get_available_feature_builders,
-    FEATURE_BUILDERS
+    register_feature_builder,
 )
 
 
 class MockFeatureBuilder(BaseFeatureBuilder):
     """Mock feature builder for testing."""
     
-    def __init__(self, config=None):
+    def __init__(self, config=None) -> None:
         """Initialize the mock feature builder."""
         super().__init__(config)
         self.name = "mock"
         
-    def build_features(self, df1, df2):
+    def build_features(self, df1, df2) -> pl.DataFrame:
         """Build mock features."""
         return pl.DataFrame({"mock_feature": [1, 2, 3]})
 
 
 @pytest.fixture
-def reset_feature_builders():
+def reset_feature_builders() -> None:
     """Reset the feature builders registry after each test."""
     original_builders = FEATURE_BUILDERS.copy()
     yield
@@ -36,7 +35,7 @@ def reset_feature_builders():
     FEATURE_BUILDERS.update(original_builders)
 
 
-def test_register_feature_builder(reset_feature_builders):
+def test_register_feature_builder(reset_feature_builders) -> None:
     """Test registering a feature builder."""
     # Mock builder class
     builder_class = MockFeatureBuilder
@@ -49,7 +48,7 @@ def test_register_feature_builder(reset_feature_builders):
     assert FEATURE_BUILDERS["test_builder"] == builder_class
 
 
-def test_create_feature_builder(reset_feature_builders):
+def test_create_feature_builder(reset_feature_builders) -> None:
     """Test creating a feature builder."""
     # Register a mock builder
     register_feature_builder("test_builder", MockFeatureBuilder)
@@ -64,13 +63,13 @@ def test_create_feature_builder(reset_feature_builders):
     assert builder.name == "mock"
 
 
-def test_create_feature_builder_unknown(reset_feature_builders):
+def test_create_feature_builder_unknown(reset_feature_builders) -> None:
     """Test creating an unknown feature builder."""
     with pytest.raises(ValueError, match="Unknown feature builder: unknown_builder"):
         create_feature_builder("unknown_builder")
 
 
-def test_get_available_feature_builders(reset_feature_builders):
+def test_get_available_feature_builders(reset_feature_builders) -> None:
     """Test getting available feature builders."""
     # Register some builders
     register_feature_builder("builder1", MockFeatureBuilder)
