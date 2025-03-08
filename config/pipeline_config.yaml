@@ -39,6 +39,31 @@ validation:
 
 # Feature engineering settings
 features:
+  output_dir: "data/features"
+  enabled_feature_sets: ["foundation"]
+  
+  # Data quality validation
+  validation:
+    enabled: true
+    raise_errors: false          # If true, raises exceptions for quality issues
+    abort_on_failure: false      # If true, aborts when quality checks fail
+    
+    # Custom thresholds for specific features (override defaults)
+    thresholds:
+      neutral_win_pct: 0.6       # Allow up to 60% missing for neutral site win percentage
+      neutral_games_played: 0.6  # Allow up to 60% missing for neutral games played
+  
+  # Foundation feature set configuration
+  foundation:
+    output_file: "team_performance.parquet"
+    recent_form_games: 10
+    
+    # Feature-specific validation configuration
+    validation:
+      # Can override global validation settings
+      enabled: true
+      # Feature-specific thresholds can be specified here
+  
   team_stats:
     # Team statistics to include as features
     offensive: ["points", "field_goals_made", "field_goals_att", "three_points_made"]

@@ -7,6 +7,7 @@ from pathlib import Path
 import polars as pl
 
 from src.features import create_feature_builder, get_available_feature_builders
+from src.features.data_quality import validate_features
 
 # Configure logging
 logging.basicConfig(
@@ -20,7 +21,8 @@ def generate_features(
     feature_set: str, 
     output_dir: str = "data/features",
     output_filename: str | None = None,
-    config: dict[str, object] | None = None
+    config: dict[str, object] | None = None,
+    validate_quality: bool = True
 ) -> Path:
     """Generate features using the specified feature builder.
     
@@ -29,6 +31,7 @@ def generate_features(
         output_dir: Directory to save the features to
         output_filename: Filename to use (without extension)
         config: Configuration parameters
+        validate_quality: Whether to validate feature quality before saving
         
     Returns:
         Path to the saved feature file
@@ -48,6 +51,30 @@ def generate_features(
     # Build the features
     logger.info("Building features")
     features = feature_builder.build_features(team_season_stats, team_box)
+    
+    # Validate feature quality if requested
+    if validate_quality:
+        logger.info("Validating feature quality")
+        
+        # Get validation configuration
+        validation_config = config.get("validation", {}) if config else {}
+        raise_errors = validation_config.get("raise_errors", False)
+        
+        # Validate features using configuration
+        quality_ok = validate_features(
+            features,
+            config=config,
+            raise_errors=raise_errors
+        )
+        
+        if quality_ok:
+            logger.info("Feature quality validation passed")
+        else:
+            logger.warning("Feature quality validation found issues (see warnings above)")
+            
+            # If configured to stop on validation failure
+            if validation_config.get("abort_on_failure", False):
+                raise ValueError("Feature quality validation failed")
     
     # Save the features
     logger.info(f"Saving features to {output_dir}")

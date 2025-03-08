@@ -73,11 +73,14 @@ def run(
             # Get feature-specific configuration
             feature_specific_config = feature_config.get(feature_set, {})
             
+            # Get the output filename (default to team_performance.parquet for backward compatibility)
+            output_filename = feature_specific_config.get("output_file", "team_performance.parquet")
+            
             # Generate features
             output_path = generate_features(
                 feature_set=feature_set,
                 output_dir=output_dir,
-                output_filename=None,  # Use default filename from the builder
+                output_filename=output_filename,  # Pass the configured filename
                 config=feature_specific_config
             )
             
