@@ -153,10 +153,15 @@ def _run_pipeline_stage(
         logger.info("Running data collection and cleaning stage")
         return {"success": run_data_stage(config)}
     
+    if stage_name == "features":
+        # Import here to avoid circular imports
+        from src.pipeline.feature_stage import run_feature_stage
+        logger.info("Running feature engineering stage")
+        return {"success": run_feature_stage(config)}
+    
     # Placeholder stages - not yet implemented
     stage_modules = {
         "eda": "src.pipeline.eda_stage",
-        "features": "src.pipeline.feature_stage",
         "model": "src.pipeline.model_stage",
         "evaluate": "src.pipeline.eval_stage"
     }

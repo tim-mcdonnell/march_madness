@@ -246,7 +246,11 @@ def get_default_config() -> dict[str, Any]:
             ]
         },
         "features": {
-            "output_dir": "data/features"
+            "output_dir": "data/features",
+            "enabled_feature_sets": ["foundation"],
+            "foundation": {
+                "recent_form_games": 10
+            }
         },
         "models": {
             "model_dir": "models",
