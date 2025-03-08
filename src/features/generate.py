@@ -1,6 +1,7 @@
 """Feature generation script for March Madness predictor."""
 
 import argparse
+import inspect
 import logging
 from pathlib import Path
 
@@ -41,16 +42,41 @@ def generate_features(
     # Create the feature builder
     feature_builder = create_feature_builder(feature_set, config)
     
-    # Load the required data
-    logger.info("Loading team season statistics")
-    team_season_stats = pl.read_parquet("data/processed/team_season_statistics.parquet")
+    # Determine required data based on build_features signature
+    build_features_sig = inspect.signature(feature_builder.build_features)
+    param_names = list(build_features_sig.parameters.keys())
     
-    logger.info("Loading team box scores")
-    team_box = pl.read_parquet("data/processed/team_box.parquet")
+    # Common data files for all feature builders
+    data_files = {
+        "team_season_stats": "data/processed/team_season_statistics.parquet",
+        "team_box": "data/processed/team_box.parquet",
+    }
+    
+    # Additional files for specific feature sets
+    if feature_set == "efficiency" or "schedules" in param_names:
+        data_files["schedules"] = "data/processed/schedules.parquet"
+    
+    # For phase 2 efficiency metrics, we need team_performance from phase 1
+    if feature_set == "efficiency":
+        data_files["team_performance"] = "data/features/team_performance.parquet"
+    
+    # Load required data
+    loaded_data = {}
+    for param_name, file_path in data_files.items():
+        logger.info(f"Loading {param_name} from {file_path}")
+        loaded_data[param_name] = pl.read_parquet(file_path)
+    
+    # Match parameters to build_features signature
+    build_args = {}
+    for param in param_names:
+        if param in loaded_data:
+            build_args[param] = loaded_data[param]
+        else:
+            logger.warning(f"Required parameter {param} not found in loaded data")
     
     # Build the features
-    logger.info("Building features")
-    features = feature_builder.build_features(team_season_stats, team_box)
+    logger.info(f"Building features using {feature_set} builder")
+    features = feature_builder.build_features(**build_args)
     
     # Validate feature quality if requested
     if validate_quality:
@@ -105,9 +131,11 @@ def main() -> None:
     parser.add_argument(
         "--output-filename", 
         type=str, 
-        default="team_performance.parquet",
-        help="Filename to use (without extension)"
+        default=None,
+        help="Filename to use (without extension, defaults to feature set name)"
     )
+    
+    # Foundation-specific parameters
     parser.add_argument(
         "--recent-form-games",
         type=int,
@@ -115,19 +143,46 @@ def main() -> None:
         help="Number of games to consider for recent form calculation"
     )
     
+    # Efficiency-specific parameters
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=10,
+        help="Number of iterations for efficiency rating adjustments"
+    )
+    parser.add_argument(
+        "--min-possessions",
+        type=int,
+        default=100,
+        help="Minimum possessions for efficiency rating reliability"
+    )
+    
     args = parser.parse_args()
     
     # Create config dict from arguments
     config = {
         "recent_form_games": args.recent_form_games,
-        "output_file": args.output_filename,
+        "iterations": args.iterations,
+        "min_possessions": args.min_possessions,
     }
+    
+    # Set default output filename based on feature set if not provided
+    output_filename = args.output_filename
+    if output_filename is None:
+        if args.feature_set == "foundation":
+            output_filename = "team_performance.parquet"
+        elif args.feature_set == "efficiency":
+            output_filename = "team_efficiency.parquet"
+        else:
+            output_filename = f"{args.feature_set}.parquet"
+    
+    config["output_file"] = output_filename
     
     # Generate the features
     output_path = generate_features(
         args.feature_set,
         args.output_dir,
-        args.output_filename,
+        output_filename,
         config
     )
     

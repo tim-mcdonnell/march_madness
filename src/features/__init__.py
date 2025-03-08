@@ -3,6 +3,7 @@
 # Import feature builders and utilities
 from src.features.base import BaseFeatureBuilder
 from src.features.builders.foundation import FoundationFeatureBuilder
+from src.features.builders.efficiency import EfficiencyFeatureBuilder
 from src.features.factory import (
     FEATURE_BUILDERS,
     create_feature_builder,
@@ -12,6 +13,7 @@ from src.features.factory import (
 
 # Register the feature builders
 register_feature_builder("foundation", FoundationFeatureBuilder)
+register_feature_builder("efficiency", EfficiencyFeatureBuilder)
 
 __all__ = [
     "BaseFeatureBuilder",
@@ -20,4 +22,5 @@ __all__ = [
     "get_available_feature_builders",
     "FEATURE_BUILDERS",
     "FoundationFeatureBuilder",
+    "EfficiencyFeatureBuilder",
 ]
