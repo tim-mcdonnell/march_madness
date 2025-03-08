@@ -2,13 +2,14 @@
 
 import importlib
 import os
+from collections.abc import Generator
 
 import polars as pl
 import pytest
 
 
 @pytest.fixture
-def setup_env() -> None:
+def setup_env() -> Generator[None, None, None]:
     """Ensure efficiency features are enabled for these specific tests."""
     old_value = os.environ.get("ENABLE_EFFICIENCY_FEATURES", "1")
     os.environ["ENABLE_EFFICIENCY_FEATURES"] = "1"
