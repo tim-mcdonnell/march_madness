@@ -55,9 +55,16 @@ class TrueShootingPercentage(BaseFeature):
             
         # Verify required columns are present
         required_cols = [
-            "team_id", "team_name", "team_score", "field_goals_attempted", 
+            "team_id", "team_name", "field_goals_attempted", 
             "free_throws_attempted", "season"
         ]
+        
+        # Check for either team_score or points
+        if "points" not in team_box.columns and "team_score" not in team_box.columns:
+            raise ValueError("Either 'points' or 'team_score' column is required")
+        
+        # Determine which score column to use
+        score_col = "points" if "points" in team_box.columns else "team_score"
         
         missing_cols = [col for col in required_cols if col not in team_box.columns]
         if missing_cols:
@@ -76,7 +83,7 @@ class TrueShootingPercentage(BaseFeature):
             team_box
             .group_by(group_cols)
             .agg([
-                pl.sum("team_score").alias("points"),
+                pl.sum(score_col).alias("points"),
                 pl.sum("field_goals_attempted").alias("fga"),
                 pl.sum("free_throws_attempted").alias("fta")
             ])

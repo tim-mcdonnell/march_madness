@@ -127,6 +127,41 @@ class BaseFeature(abc.ABC):
         """
         return result
     
+    def safe_join(
+        self, 
+        left: pl.DataFrame, 
+        right: pl.DataFrame, 
+        on: str | list[str], 
+        how: str = "inner", 
+        suffix: str = "_right"
+    ) -> pl.DataFrame:
+        """Safely join two DataFrames with handling for duplicate columns.
+        
+        This utility method wraps polars join operations to consistently handle
+        column name conflicts during joins.
+        
+        Args:
+            left: Left DataFrame in the join
+            right: Right DataFrame in the join
+            on: Column name(s) to join on
+            how: Join type ('inner', 'left', 'outer', etc.)
+            suffix: Suffix to add to duplicate column names from the right DataFrame
+            
+        Returns:
+            Joined DataFrame with duplicate columns properly suffixed
+        """
+        try:
+            return left.join(right, on=on, how=how, suffix=suffix)
+        except Exception as e:
+            logger.error(f"Join error in {self.id}: {e}")
+            # Try to provide more helpful error message
+            if "duplicate" in str(e).lower():
+                common_cols = set(left.columns).intersection(set(right.columns))
+                join_cols = [on] if isinstance(on, str) else on
+                duplicate_cols = common_cols - set(join_cols)
+                logger.warning(f"Duplicate columns detected: {duplicate_cols}")
+            raise
+    
     def __str__(self) -> str:
         """Get a string representation of the feature."""
         return f"{self.id} - {self.name} ({self.category})"

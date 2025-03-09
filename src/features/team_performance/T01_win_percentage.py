@@ -69,7 +69,7 @@ class WinPercentage(BaseFeature):
         has_away_location = "away_display_name" in schedules.columns
         
         # Create home team results
-        home_results = schedules.select([
+        home_cols = [
             pl.col("home_id").alias("team_id"),
             pl.col("home_name").alias("team_name"),
             pl.col("season"),
@@ -78,16 +78,19 @@ class WinPercentage(BaseFeature):
             pl.lit(1).alias("games"),
             pl.lit(1).alias("home_games"),
             pl.lit(0).alias("away_games"),
-        ])
+        ]
         
         # Add team_location if available
         if has_home_location:
-            home_results = home_results.with_columns([
-                pl.col("home_display_name").alias("team_location")
-            ])
+            home_cols.append(pl.col("home_display_name").alias("team_location"))
+        else:
+            # Use team_name as location if display_name not available
+            home_cols.append(pl.col("home_name").alias("team_location"))
+            
+        home_results = schedules.select(home_cols)
         
         # Create away team results
-        away_results = schedules.select([
+        away_cols = [
             pl.col("away_id").alias("team_id"),
             pl.col("away_name").alias("team_name"),
             pl.col("season"),
@@ -96,13 +99,16 @@ class WinPercentage(BaseFeature):
             pl.lit(1).alias("games"),
             pl.lit(0).alias("home_games"),
             pl.lit(1).alias("away_games"),
-        ])
+        ]
         
         # Add team_location if available
         if has_away_location:
-            away_results = away_results.with_columns([
-                pl.col("away_display_name").alias("team_location")
-            ])
+            away_cols.append(pl.col("away_display_name").alias("team_location"))
+        else:
+            # Use team_name as location if display_name not available
+            away_cols.append(pl.col("away_name").alias("team_location"))
+            
+        away_results = schedules.select(away_cols)
         
         # Combine results
         all_results = pl.concat([home_results, away_results])

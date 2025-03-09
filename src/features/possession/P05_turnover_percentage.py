@@ -92,18 +92,36 @@ class TurnoverPercentage(BaseFeature):
         if has_display_name:
             group_cols.append("team_display_name")
             
+        # Create aggregation expressions list
+        agg_exprs = [
+            pl.sum("field_goals_attempted").alias("total_fga"),
+            pl.sum("free_throws_attempted").alias("total_fta"),
+            pl.sum("turnovers").alias("total_turnovers"),
+            pl.sum("offensive_rebounds").alias("total_orb"),
+        ]
+        
+        # Add optional columns if they exist
+        if "team_rebounds" in team_box.columns:
+            agg_exprs.append(pl.sum("team_rebounds").alias("total_team_rebounds"))
+        else:
+            logger.warning("team_rebounds column not found, using 0 as placeholder")
+            # Add a placeholder column filled with 0
+            team_box = team_box.with_columns(pl.lit(0).alias("team_rebounds_placeholder"))
+            agg_exprs.append(pl.sum("team_rebounds_placeholder").alias("total_team_rebounds"))
+            
+        if "opponent_defensive_rebounds" in team_box.columns:
+            agg_exprs.append(pl.sum("opponent_defensive_rebounds").alias("total_opp_drb"))
+        else:
+            logger.warning("opponent_defensive_rebounds column not found, using 0 as placeholder")
+            # Add a placeholder column filled with 0
+            team_box = team_box.with_columns(pl.lit(0).alias("opp_drb_placeholder"))
+            agg_exprs.append(pl.sum("opp_drb_placeholder").alias("total_opp_drb"))
+        
         # Calculate possessions
         result = (
             team_box
             .group_by(group_cols)
-            .agg([
-                pl.sum("field_goals_attempted").alias("total_fga"),
-                pl.sum("free_throws_attempted").alias("total_fta"),
-                pl.sum("turnovers").alias("total_turnovers"),
-                pl.sum("offensive_rebounds").alias("total_orb"),
-                pl.sum("team_rebounds").alias("total_team_rebounds"),
-                pl.sum("opponent_defensive_rebounds").alias("total_opp_drb"),
-            ])
+            .agg(agg_exprs)
         )
         
         # Drop intermediate columns from possessions_df

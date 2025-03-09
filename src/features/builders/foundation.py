@@ -9,10 +9,14 @@ This module implements the Phase 1 foundation features:
 """
 
 
+import logging
+
 import numpy as np
 import polars as pl
 
-from src.features.base import BaseFeatureBuilder
+from src.features.core.base import BaseFeature as BaseFeatureBuilder
+
+logger = logging.getLogger(__name__)
 
 
 class FoundationFeatureBuilder(BaseFeatureBuilder):
@@ -31,6 +35,41 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
         self.recent_form_games = self.config.get("recent_form_games", 10)
         self.output_file = self.config.get("output_file", "team_performance.parquet")
         
+    def safe_join(
+        self, 
+        left: pl.DataFrame, 
+        right: pl.DataFrame, 
+        on: str | list[str], 
+        how: str = "inner", 
+        suffix: str = "_right"
+    ) -> pl.DataFrame:
+        """Safely join two DataFrames with handling for duplicate columns.
+        
+        This utility method wraps polars join operations to consistently handle
+        column name conflicts during joins.
+        
+        Args:
+            left: Left DataFrame in the join
+            right: Right DataFrame in the join
+            on: Column name(s) to join on
+            how: Join type ('inner', 'left', 'outer', etc.)
+            suffix: Suffix to add to duplicate column names from the right DataFrame
+            
+        Returns:
+            Joined DataFrame with duplicate columns properly suffixed
+        """
+        try:
+            return left.join(right, on=on, how=how, suffix=suffix)
+        except Exception as e:
+            logger.error(f"Join error in foundation feature builder: {e}")
+            # Try to provide more helpful error message
+            if "duplicate" in str(e).lower():
+                common_cols = set(left.columns).intersection(set(right.columns))
+                join_cols = [on] if isinstance(on, str) else on
+                duplicate_cols = common_cols - set(join_cols)
+                logger.warning(f"Duplicate columns detected: {duplicate_cols}")
+            raise
+    
     def build_features(self, 
                       team_season_stats: pl.DataFrame,
                       team_box: pl.DataFrame) -> pl.DataFrame:
@@ -51,8 +90,6 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
             schedules = pl.read_parquet("data/processed/schedules.parquet")
         except Exception as e:
             # If schedules data cannot be loaded, log a warning and continue without it
-            import logging
-            logger = logging.getLogger(__name__)
             logger.warning(f"Could not load schedules data: {e}. Neutral site win percentage may be inaccurate.")
             schedules = None
         
@@ -74,8 +111,8 @@ class FoundationFeatureBuilder(BaseFeatureBuilder):
         # Combine all metrics into a single DataFrame
         all_metrics = shooting_metrics
         for df in [possession_metrics, win_pct_metrics, form_metrics, hca_metrics]:
-            all_metrics = all_metrics.join(
-                df, on=["team_id", "season"], how="left"
+            all_metrics = self.safe_join(
+                all_metrics, df, on=["team_id", "season"], how="left"
             )
         
         # Join with the base team_season_stats DataFrame and return
