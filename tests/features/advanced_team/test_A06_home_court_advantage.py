@@ -6,7 +6,7 @@ import pytest
 from src.features.advanced_team.A06_home_court_advantage import HomeCourtAdvantage
 
 
-def create_test_data():
+def create_test_data() -> dict[str, pl.DataFrame]:
     """Create test data for Home Court Advantage calculation."""
     # Create team_box test data
     team_box_data = []
@@ -120,7 +120,7 @@ def create_test_data():
     }
 
 
-def test_home_court_advantage_calculation():
+def test_home_court_advantage_calculation() -> None:
     """Test the Home Court Advantage calculation."""
     # Create feature instance
     feature = HomeCourtAdvantage(min_home_games=5, min_away_games=5)
@@ -155,7 +155,7 @@ def test_home_court_advantage_calculation():
     assert result.filter(pl.col("team_id") == 3).height == 0
 
 
-def test_home_court_advantage_with_schedules():
+def test_home_court_advantage_with_schedules() -> None:
     """Test that the feature correctly uses schedules data for neutral sites."""
     # Create feature instance
     feature = HomeCourtAdvantage(min_home_games=5, min_away_games=5)
@@ -184,7 +184,7 @@ def test_home_court_advantage_with_schedules():
     assert hca_no_schedules != hca_with_schedules
 
 
-def test_missing_venue_type_column():
+def test_missing_venue_type_column() -> None:
     """Test handling of column name differences."""
     # Create feature instance
     feature = HomeCourtAdvantage()
