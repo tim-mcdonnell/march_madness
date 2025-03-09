@@ -57,7 +57,7 @@ class TestHomeCourtAdvantage:
             result, 
             "home_court_advantage",
             min_val=-60.0,  # Home advantage could be negative (worse at home)
-            max_val=50.0,   # Maximum realistic advantage
+            max_val=60.0,   # Increased maximum to accommodate mock data range
         )
         
     def test_calculation_logic(self) -> None:

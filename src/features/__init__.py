@@ -249,14 +249,27 @@ def calculate_category_features(
         
         logger.debug(f"Feature {feature_id} DataFrame has columns: {feature_df.columns}")
         
-        # Join with base DataFrame
         try:
+            # Join the feature DataFrame with the base DataFrame
+            join_cols = [col for col in df_join_cols if col in base_df.columns]
+            if not join_cols:
+                logger.warning(f"Cannot join feature {feature_id} - no common join columns")
+                continue
+            
+            # Use safe join to avoid column name conflicts
+            new_cols = [col for col in feature_df.columns if col not in base_df.columns]
+            if not new_cols:
+                logger.warning(f"Feature {feature_id} has no new columns to add")
+                continue
+            
+            # Only select new columns from feature_df to avoid duplicates
+            feature_df_new = feature_df.select(join_cols + new_cols)
             base_df = base_df.join(
-                feature_df,
-                on=df_join_cols,
-                how="outer"
+                feature_df_new,
+                on=join_cols,
+                how="left",
+                suffix="_right"  # Add suffix for duplicate columns
             )
-            logger.debug(f"After joining {feature_id}, base DataFrame has columns: {base_df.columns}")
         except Exception as e:
             logger.error(f"Error joining feature {feature_id}: {e}")
     

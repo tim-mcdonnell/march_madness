@@ -14,7 +14,7 @@ import logging
 
 import polars as pl
 
-from src.features.base import BaseFeatureBuilder
+from src.features.core.base import BaseFeature as BaseFeatureBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,41 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         self.league_average_oe = self.config.get("league_average_oe", 100)
         self.league_average_de = self.config.get("league_average_de", 100)
         self.league_average_tempo = self.config.get("league_average_tempo", 70)
+        
+    def safe_join(
+        self, 
+        left: pl.DataFrame, 
+        right: pl.DataFrame, 
+        on: str | list[str], 
+        how: str = "inner", 
+        suffix: str = "_right"
+    ) -> pl.DataFrame:
+        """Safely join two DataFrames with handling for duplicate columns.
+        
+        This utility method wraps polars join operations to consistently handle
+        column name conflicts during joins.
+        
+        Args:
+            left: Left DataFrame in the join
+            right: Right DataFrame in the join
+            on: Column name(s) to join on
+            how: Join type ('inner', 'left', 'outer', etc.)
+            suffix: Suffix to add to duplicate column names from the right DataFrame
+            
+        Returns:
+            Joined DataFrame with duplicate columns properly suffixed
+        """
+        try:
+            return left.join(right, on=on, how=how, suffix=suffix)
+        except Exception as e:
+            logger.error(f"Join error in efficiency feature builder: {e}")
+            # Try to provide more helpful error message
+            if "duplicate" in str(e).lower():
+                common_cols = set(left.columns).intersection(set(right.columns))
+                join_cols = [on] if isinstance(on, str) else on
+                duplicate_cols = common_cols - set(join_cols)
+                logger.warning(f"Duplicate columns detected: {duplicate_cols}")
+            raise
         
     def build_features(self, 
                       team_performance: pl.DataFrame,
@@ -226,13 +261,11 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
         logger.info(f"Calculating adjusted metrics with {self.iterations} iterations")
         
         # Prepare a combined dataframe with raw metrics
-        combined_metrics = (
-            raw_efficiency
-            .join(
-                raw_tempo,
-                on=["team_id", "season"],
-                how="inner"
-            )
+        combined_metrics = self.safe_join(
+            raw_efficiency,
+            raw_tempo,
+            on=["team_id", "season"],
+            how="inner"
         )
         
         # Maps from team_id to index and vice versa for faster lookups
@@ -282,22 +315,21 @@ class EfficiencyFeatureBuilder(BaseFeatureBuilder):
             }
         
         # Prepare schedules: only consider games between teams with ratings
-        valid_games = (
-            schedules
-            .join(
-                combined_metrics.select("team_id", "season"),
-                left_on=["home_id", "season"],
-                right_on=["team_id", "season"],
-                how="inner"
-            )
-            .join(
-                combined_metrics.select("team_id", "season"),
-                left_on=["away_id", "season"],
-                right_on=["team_id", "season"],
-                how="inner"
-            )
-            .select("game_id", "season", "home_id", "away_id")
+        valid_games = self.safe_join(
+            schedules,
+            combined_metrics.select("team_id", "season"),
+            on=["home_id", "season"],
+            how="inner"
         )
+        
+        # Also join on away_id
+        valid_games = self.safe_join(
+            valid_games,
+            combined_metrics.select("team_id", "season"),
+            left_on=["away_id", "season"],
+            right_on=["team_id", "season"],
+            how="inner"
+        ).select("game_id", "season", "home_id", "away_id")
         
         logger.info(f"Using {valid_games.height} games for adjusting ratings")
         

@@ -119,7 +119,7 @@ class OffensiveEfficiency(BaseFeature):
         
         # Join points_df with possessions_df
         join_cols = ["team_id", "team_name", "team_location", "season"]
-        result = points_df.join(possessions_df, on=join_cols, how="inner")
+        result = self.safe_join(points_df, possessions_df, on=join_cols, how="inner")
         
         # Calculate offensive efficiency (points per 100 possessions)
         result = result.with_columns([

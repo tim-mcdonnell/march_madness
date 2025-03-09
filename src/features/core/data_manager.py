@@ -45,7 +45,39 @@ class FeatureDataManager:
         self.features_dir.mkdir(parents=True, exist_ok=True)
         (self.features_dir / "combined").mkdir(exist_ok=True)
         
+        # Standard column mapping to normalize column names across features
+        self.column_mapping = {
+            # Map processed data column names to feature-expected names
+            "team_score": "points",
+            "opponent_team_score": "opponent_points",
+            "team_home_away": "venue_type",
+        }
+        
         logger.debug(f"Data manager initialized with features_dir: {self.features_dir}")
+    
+    def standardize_columns(self, df: pl.DataFrame) -> pl.DataFrame:
+        """Standardize column names to match feature expectations.
+        
+        This method renames columns according to the column_mapping dictionary
+        to ensure consistent column names across all features.
+        
+        Args:
+            df: Input DataFrame with original column names
+            
+        Returns:
+            DataFrame with standardized column names
+        """
+        # Create a mapping of columns that actually exist in the dataframe
+        rename_dict = {
+            old: new for old, new in self.column_mapping.items() 
+            if old in df.columns and new not in df.columns
+        }
+        
+        if rename_dict:
+            logger.debug(f"Standardizing columns: {rename_dict}")
+            return df.rename(rename_dict)
+        
+        return df
     
     def load_processed_data(self, data_type: str) -> pl.DataFrame | None:
         """Load processed data of a specific type.
@@ -66,6 +98,9 @@ class FeatureDataManager:
             df = pl.read_parquet(file_path)
             
             # Standardize column names
+            df = self.standardize_columns(df)
+            
+            # Standardize team_display_name to team_location for consistency
             if "team_display_name" in df.columns and "team_location" not in df.columns:
                 df = df.rename({"team_display_name": "team_location"})
             
@@ -143,7 +178,8 @@ class FeatureDataManager:
                 merged_df = existing_df.join(
                     result_df,
                     on=join_cols,
-                    how="outer"
+                    how="outer",
+                    suffix="_right"  # Add suffix for duplicate columns
                 )
                 
                 logger.info(f"Merged {len(feature_cols)} new columns with existing data")
@@ -190,28 +226,35 @@ class FeatureDataManager:
                     logger.info(f"No columns with _right suffix found in {category_name}")
                     continue
                 
-                # Create a column mapping to rename _right columns back to their base names
-                # But only for our standard join columns
+                # Create a column mapping to rename _right columns
                 rename_dict = {}
+                drop_cols = []
+                
                 for col in right_suffix_cols:
                     base_col = col.replace("_right", "")
+                    
+                    # For standard join columns, always prefer the non-suffixed version
                     if base_col in standard_cols:
-                        rename_dict[col] = base_col
+                        drop_cols.append(col)  # Drop the _right version 
+                    else:
+                        # For feature columns, if both exist, keep the _right version (newer)
+                        # and drop the old one
+                        if base_col in df.columns:
+                            drop_cols.append(base_col)  # Drop the old version
+                            rename_dict[col] = base_col  # Rename _right to replace it
                 
-                # Only keep non-duplicate columns
-                unique_cols = []
-                for col in df.columns:
-                    # For standard join columns without _right, keep them
-                    if col in standard_cols or not col.endswith("_right") or col not in rename_dict:
-                        unique_cols.append(col)
+                # First drop any columns we want to eliminate
+                if drop_cols:
+                    df = df.drop(drop_cols)
+                    logger.info(f"Removed {len(drop_cols)} duplicate/outdated columns in {category_name}")
                 
-                # Select only the unique columns to keep
-                cleaned_df = df.select(unique_cols)
-                
-                logger.info(f"Removed {len(right_suffix_cols)} duplicate columns in {category_name}")
+                # Then rename the _right columns to their base names
+                if rename_dict:
+                    df = df.rename(rename_dict)
+                    logger.info(f"Renamed {len(rename_dict)} _right columns in {category_name}")
                 
                 # Save cleaned DataFrame
-                cleaned_df.write_parquet(file_path)
+                df.write_parquet(file_path)
                 logger.info(f"Saved cleaned {category_name} feature file")
             
             except Exception as e:
@@ -309,7 +352,7 @@ class FeatureDataManager:
                     join_df = feature_df.select(std_join_cols)
                     
                     # First join the join columns
-                    base_df = base_df.join(join_df, on=std_join_cols, how="left")
+                    base_df = base_df.join(join_df, on=std_join_cols, how="left", suffix="_right")
                     
                     # Then add each feature column separately
                     for col in feature_only_df.columns:
@@ -317,7 +360,8 @@ class FeatureDataManager:
                         base_df = base_df.join(
                             temp_df.select(std_join_cols + [col]), 
                             on=std_join_cols, 
-                            how="left"
+                            how="left",
+                            suffix="_right"
                         )
                 except Exception as e:
                     logger.error(f"Error joining {category} features: {e}")
