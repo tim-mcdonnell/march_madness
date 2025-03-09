@@ -8,12 +8,13 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 - 🟡 In Progress
 - 🟢 Implemented
 - 📝 Documented
+- 🔧 Issue Opened (Data quality/completeness issue identified)
 
 ## Complexity Legend
 - 1️⃣ Simple calculation from direct data
 - 2️⃣ Moderate calculation requiring some data manipulation
 - 3️⃣ Complex calculation requiring significant data processing
-- 4️⃣ Very complex calculation requiring advanced methods
+- 4️⃣ Very complex requiring advanced methods
 - 5️⃣ Extremely complex requiring sophisticated algorithms
 
 ## Features
@@ -21,16 +22,16 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 ### Team Performance Metrics
 | ID | Feature | Description | Complexity | Status | Implementation | Documentation |
 |----|---------|-------------|-----------|--------|----------------|---------------|
-| T01 | Win Percentage | Overall, home, away, and neutral site | 1️⃣ | 🟢 | [src/features/team_performance/T01_win_percentage.py](src/features/team_performance/T01_win_percentage.py) | [docs/features/team_performance/T01_win_percentage.md](docs/features/team_performance/T01_win_percentage.md) |
-| T02 | Point Differential | Average margin of victory/defeat | 1️⃣ | 🟢 | [src/features/team_performance/T02_point_differential.py](src/features/team_performance/T02_point_differential.py) | [docs/features/team_performance/T02_point_differential.md](docs/features/team_performance/T02_point_differential.md) |
+| T01 | Win Percentage | Overall, home, away, and neutral site | 1️⃣ | 🟢 🔧 | [src/features/team_performance/T01_win_percentage.py](src/features/team_performance/T01_win_percentage.py) | [docs/features/team_performance/T01_win_percentage.md](docs/features/team_performance/T01_win_percentage.md) |
+| T02 | Point Differential | Average margin of victory/defeat | 1️⃣ | 🟢 🔧 | [src/features/team_performance/T02_point_differential.py](src/features/team_performance/T02_point_differential.py) | [docs/features/team_performance/T02_point_differential.md](docs/features/team_performance/T02_point_differential.md) |
 | T03 | Team Offensive Efficiency Rating (O-Rate) | Points scored per 100 possessions, adjusted for opponent strength | 3️⃣ | 🟡 | [PR #23](https://github.com/username/repo/pull/23) | - |
 | T04 | Team Defensive Efficiency Rating (D-Rate) | Points allowed per 100 possessions, adjusted for opponent strength | 3️⃣ | 🔴 | - | - |
 | T05 | Relative Rating | Combined O-Rate and D-Rate (net efficiency) | 3️⃣ | 🔴 | - | - |
 | T06 | True Tempo | Average possessions per 40 minutes, adjusted for opponents | 2️⃣ | 🔴 | - | - |
 | T07 | Opponent Strength Adjustment | How a team performs against strong vs. weak competition | 4️⃣ | 🔴 | - | - |
 | T08 | Game Pace Adjustment | How a team performs in fast vs. slow-paced games | 3️⃣ | 🔴 | - | - |
-| T09 | Recent Form | Performance trend over the last N games (weighted recency) | 2️⃣ | 🟢 | [src/features/team_performance/T09_recent_form.py](src/features/team_performance/T09_recent_form.py) | - |
-| T10 | Consistency Rating | Variance in game-to-game performance | 2️⃣ | 🟢 | [src/features/team_performance/T10_consistency_rating.py](src/features/team_performance/T10_consistency_rating.py) | - |
+| T09 | Recent Form | Performance trend over the last N games (weighted recency) | 2️⃣ | 🟢 🔧 | [src/features/team_performance/T09_recent_form.py](src/features/team_performance/T09_recent_form.py) | - |
+| T10 | Consistency Rating | Variance in game-to-game performance | 2️⃣ | 🟢 🔧 | [src/features/team_performance/T10_consistency_rating.py](src/features/team_performance/T10_consistency_rating.py) | - |
 | T11 | Strength of Schedule | Overall schedule difficulty rating | 3️⃣ | 🔴 | - | - |
 
 ### Advanced Team Metrics
@@ -48,9 +49,9 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 | ID | Feature | Description | Complexity | Status | Implementation | Documentation |
 |----|---------|-------------|-----------|--------|----------------|---------------|
 | S01 | Effective Field Goal Percentage (eFG%) | Field goal percentage adjusted for three-pointers | 1️⃣ | 🟢 | [src/features/shooting/S01_effective_field_goal_percentage.py](src/features/shooting/S01_effective_field_goal_percentage.py) | [docs/features/shooting/S01_effective_field_goal_percentage.md](docs/features/shooting/S01_effective_field_goal_percentage.md) |
-| S02 | True Shooting Percentage (TS%) | Shooting efficiency including free throws | 1️⃣ | 🟢 | [src/features/shooting/S02_true_shooting_percentage.py](src/features/shooting/S02_true_shooting_percentage.py) | [docs/features/shooting/S02_true_shooting_percentage.md](docs/features/shooting/S02_true_shooting_percentage.md) |
-| S03 | Three-Point Rate | Percentage of field goal attempts from three-point range | 1️⃣ | 🟢 | [src/features/shooting/S03_three_point_rate.py](src/features/shooting/S03_three_point_rate.py) | [docs/features/shooting/S03_three_point_rate.md](docs/features/shooting/S03_three_point_rate.md) |
-| S04 | Free Throw Rate | Free throw attempts relative to field goal attempts | 1️⃣ | 🟢 | [src/features/shooting/S04_free_throw_rate.py](src/features/shooting/S04_free_throw_rate.py) | - |
+| S02 | True Shooting Percentage (TS%) | Shooting efficiency including free throws | 1️⃣ | 🟢 🔧 | [src/features/shooting/S02_true_shooting_percentage.py](src/features/shooting/S02_true_shooting_percentage.py) | [docs/features/shooting/S02_true_shooting_percentage.md](docs/features/shooting/S02_true_shooting_percentage.md) |
+| S03 | Three-Point Rate | Percentage of field goal attempts from three-point range | 1️⃣ | 🟢 🔧 | [src/features/shooting/S03_three_point_rate.py](src/features/shooting/S03_three_point_rate.py) | [docs/features/shooting/S03_three_point_rate.md](docs/features/shooting/S03_three_point_rate.md) |
+| S04 | Free Throw Rate | Free throw attempts relative to field goal attempts | 1️⃣ | 🟢 🔧 | [src/features/shooting/S04_free_throw_rate.py](src/features/shooting/S04_free_throw_rate.py) | - |
 | S05 | Points Per Possession | Raw points scored per possession | 2️⃣ | 🔴 | - | - |
 | S06 | Shooting Distribution | Breakdown of scoring by two-pointers, three-pointers, and free throws | 2️⃣ | 🔴 | - | - |
 | S07 | Fast Break Points Per Game | Points scored in transition | 1️⃣ | 🔴 | - | - |
@@ -58,14 +59,14 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 ### Possession and Ball Control Metrics
 | ID | Feature | Description | Complexity | Status | Implementation | Documentation |
 |----|---------|-------------|-----------|--------|----------------|---------------|
-| P01 | Possessions | Estimated number of possessions per game | 2️⃣ | 🟢 | [src/features/possession/P01_possessions.py](src/features/possession/P01_possessions.py) | [docs/features/possession/P01_possessions.md](docs/features/possession/P01_possessions.md) |
-| P02 | Offensive Rebound Percentage | Percentage of offensive rebounds captured | 2️⃣ | 🟢 | [src/features/possession/P02_offensive_rebound_percentage.py](src/features/possession/P02_offensive_rebound_percentage.py) | - |
-| P03 | Defensive Rebound Percentage | Percentage of defensive rebounds captured | 2️⃣ | 🟢 | [src/features/possession/P03_defensive_rebound_percentage.py](src/features/possession/P03_defensive_rebound_percentage.py) | - |
-| P04 | Total Rebound Percentage | Overall rebounding efficiency | 2️⃣ | 🟢 | [src/features/possession/P04_total_rebound_percentage.py](src/features/possession/P04_total_rebound_percentage.py) | - |
-| P05 | Turnover Percentage | Turnovers per 100 possessions | 2️⃣ | 🟢 | [src/features/possession/P05_turnover_percentage.py](src/features/possession/P05_turnover_percentage.py) | - |
+| P01 | Possessions | Estimated number of possessions per game | 2️⃣ | 🟢 🔧 | [src/features/possession/P01_possessions.py](src/features/possession/P01_possessions.py) | [docs/features/possession/P01_possessions.md](docs/features/possession/P01_possessions.md) |
+| P02 | Offensive Rebound Percentage | Percentage of offensive rebounds captured | 2️⃣ | 🟢 🔧 | [src/features/possession/P02_offensive_rebound_percentage.py](src/features/possession/P02_offensive_rebound_percentage.py) | - |
+| P03 | Defensive Rebound Percentage | Percentage of defensive rebounds captured | 2️⃣ | 🟢 🔧 | [src/features/possession/P03_defensive_rebound_percentage.py](src/features/possession/P03_defensive_rebound_percentage.py) | - |
+| P04 | Total Rebound Percentage | Overall rebounding efficiency | 2️⃣ | 🟢 🔧 | [src/features/possession/P04_total_rebound_percentage.py](src/features/possession/P04_total_rebound_percentage.py) | - |
+| P05 | Turnover Percentage | Turnovers per 100 possessions | 2️⃣ | 🟢 🔧 | [src/features/possession/P05_turnover_percentage.py](src/features/possession/P05_turnover_percentage.py) | - |
 | P06 | Ball Control Rating | Combined metric of assists, steals, and turnovers | 2️⃣ | 🔴 | - | - |
-| P07 | Assist-to-Turnover Ratio | Team's ratio of assists to turnovers | 1️⃣ | 🟢 | [src/features/possession/P07_assist_to_turnover_ratio.py](src/features/possession/P07_assist_to_turnover_ratio.py) | - |
-| P08 | Assist Rate | Percentage of field goals that are assisted | 2️⃣ | 🟢 | [src/features/possession/P08_assist_rate.py](src/features/possession/P08_assist_rate.py) | - |
+| P07 | Assist-to-Turnover Ratio | Team's ratio of assists to turnovers | 1️⃣ | 🟢 🔧 | [src/features/possession/P07_assist_to_turnover_ratio.py](src/features/possession/P07_assist_to_turnover_ratio.py) | - |
+| P08 | Assist Rate | Percentage of field goals that are assisted | 2️⃣ | 🟢 🔧 | [src/features/possession/P08_assist_rate.py](src/features/possession/P08_assist_rate.py) | - |
 | P09 | Steal Rate | Steals per opponent possession | 2️⃣ | 🔴 | - | - |
 
 ### Defensive Metrics
@@ -107,10 +108,10 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 ### Data Engineering Features
 | ID | Feature | Description | Complexity | Status | Implementation | Documentation |
 |----|---------|-------------|-----------|--------|----------------|---------------|
-| E01 | Exponentially Weighted Metrics | Recency-weighted versions of key statistics | 2️⃣ | 🟢 | - | - |
+| E01 | Exponentially Weighted Metrics | Recency-weighted versions of key statistics | 2️⃣ | 🔴 | - | - |
 | E02 | Rolling Averages | N-game rolling averages of performance metrics | 2️⃣ | 🔴 | - | - |
 | E03 | Season Segments | Performance in different parts of season (early, mid, late) | 2️⃣ | 🔴 | - | - |
-| E04 | Variance Features | Standard deviation of key performance metrics | 2️⃣ | 🟢 | - | - |
+| E04 | Variance Features | Standard deviation of key performance metrics | 2️⃣ | 🔴 | - | - |
 | E05 | Interaction Terms | Products of relevant features that may have combined effects | 3️⃣ | 🔴 | - | - |
 | E06 | Game Importance Weight | Weighting games by importance/stakes | 3️⃣ | 🔴 | - | - |
 | E07 | Outlier Management | Handling of outlier performances | 2️⃣ | 🔴 | - | - |
