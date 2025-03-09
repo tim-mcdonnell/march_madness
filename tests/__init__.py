@@ -1,1 +1,1 @@
-"""Tests for the March Madness Predictor."""
+"""Test package for the NCAA March Madness project."""
