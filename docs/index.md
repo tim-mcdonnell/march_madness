@@ -1,48 +1,97 @@
 # NCAA March Madness Predictor Documentation
 
-Welcome to the NCAA March Madness Predictor documentation! This project aims to develop a machine learning model that predicts NCAA March Madness tournament outcomes using historical data.
+Welcome to the NCAA March Madness Predictor documentation. This central index helps you navigate the various documentation sections and find the information you need.
 
-## Documentation Sections
+## Documentation Structure
 
-### User Guide
-*Task-oriented guides on how to use the project*
+```
+docs/
+├── index.md                    # Main documentation entry point
+├── features/                   # Feature system documentation
+│   ├── index.md                # Feature system overview
+│   ├── reference/              # Feature technical reference
+│   │   └── overview.md         # Complete feature catalog
+│   ├── team_performance/       # Team performance feature docs
+│   └── shooting/               # Shooting feature docs
+├── data/                       # Data documentation
+│   ├── index.md                # Data system overview
+│   ├── processing.md           # Data processing principles
+│   └── reference/              # Technical reference for data
+│       ├── schema.md           # Data schemas
+│       ├── validation.md       # Data validation rules
+│       └── directory_structure.md # File/directory organization
+├── pipeline/                   # Pipeline documentation
+│   ├── index.md                # Pipeline overview
+│   └── cli.md                  # Command-line interface
+├── developer_guide/            # Developer documentation
+│   ├── README.md               # Developer guide overview
+│   ├── ai_assistant_guide.md   # Guide for AI assistants
+│   └── documentation_guide.md  # Documentation standards
+├── templates/                  # Documentation templates
+│   ├── feature_doc.md          # Template for feature documentation
+│   └── analysis_report.md      # Template for analysis reports
+└── research/                   # Reference materials for methodology
+```
 
-The User Guide provides practical, step-by-step instructions for using the NCAA March Madness Predictor. Start here if you want to install the software, run predictions, or understand how to configure the system for your needs.
+## Key Documentation Sections
 
-- [Installation](user_guide/installation.md)
-- [Getting Started](user_guide/getting_started.md)
-- [Pipeline Usage](user_guide/pipeline_usage.md)
-- [Configuration](user_guide/configuration.md)
-- [Working with Data](user_guide/working_with_data.md)
+### Feature System (`/docs/features/`)
 
-### Technical Reference
-*Detailed technical specifications and architecture documentation*
+Documentation for the feature engineering system that powers our prediction model.
 
-The Technical Reference provides in-depth information about how the system works internally. Consult this section when you need detailed information about data schemas, pipeline architecture, or other technical details.
+- [Feature System Overview](features/index.md) - Structure and usage of the feature system
+- [Feature Reference](features/reference/overview.md) - Complete list of features with complexity and status
+- [T01 Win Percentage](features/team_performance/T01_win_percentage.md) - Documentation for Win Percentage feature
+- [S01 Effective Field Goal Percentage](features/shooting/S01_effective_field_goal_percentage.md) - Documentation for eFG% feature
 
-- **Data**
-  - [Data Overview](reference/data/overview.md)
-  - [Data Cleaning](reference/data/cleaning.md)
-  - [Data Processing](reference/data/processing.md)
-  - [Data Validation](reference/data/validation.md)
-  - [Data Schema](reference/data/schema.md)
-- **Pipeline**
-  - [Pipeline Overview](reference/pipeline/overview.md)
-  - [Data Stage](reference/pipeline/data_stage.md)
-  - [Feature Engineering Stage](reference/pipeline/feature_stage.md)
-  - [Model Stage](reference/pipeline/model_stage.md)
+### Data Documentation (`/docs/data/`)
 
-### Developer Guide
-*Process-oriented guidance for contributors and developers*
+Information about the data used in the project, its processing, and organization.
 
-The Developer Guide provides information for developers who want to extend or contribute to the NCAA March Madness Predictor. Use this section when you want to add new features, modify existing functionality, or understand the project's architecture from a developer's perspective.
+- [Data Overview](data/index.md) - Overview of the data documentation
+- [Data Processing](data/processing.md) - Data processing principles and methodology
+- [Directory Structure](data/reference/directory_structure.md) - How data files are organized
+- [Data Schema](data/reference/schema.md) - Detailed data schemas and column definitions
 
-- [Code Standards](developer_guide/code_standards.md)
-- [AI Assistant Guide](developer_guide/ai_assistant_guide.md)
-- **Extending the Project**
-  - [Adding Features](developer_guide/extending.md)
-  - [Custom Models](developer_guide/extending/custom_models.md)
-  - [Visualization](developer_guide/extending/visualization.md)
+### Pipeline Documentation (`/docs/pipeline/`)
+
+Documentation specific to the processing pipeline.
+
+- [Pipeline Architecture](pipeline/index.md) - Pipeline design and components
+- [CLI Reference](pipeline/cli.md) - Command-line interface documentation
+
+### Developer Documentation (`/docs/developer_guide/`)
+
+Guidelines and instructions for developers working on the project.
+
+- [AI Assistant Guide](developer_guide/ai_assistant_guide.md) - Comprehensive guide for AI coding assistants
+- [Documentation Guide](developer_guide/documentation_guide.md) - Documentation standards and processes
+- [Developer Overview](developer_guide/README.md) - General developer onboarding
+
+## Core Workflows
+
+### Feature Development Workflow
+
+1. Check the [Feature Reference](features/reference/overview.md) for unimplemented features
+2. Follow the [Feature Implementation Guide](features/index.md) to implement a new feature
+3. Update the feature registry in [Feature Reference](features/reference/overview.md)
+4. Create feature documentation following the [Feature Documentation Template](templates/feature_doc.md)
+
+### Data Processing Workflow
+
+1. Review the [Data Processing Guide](data/processing.md) for principles
+2. Follow the [Data Loading](pipeline/index.md) guide for adding new data sources
+3. Reference the [Pipeline CLI documentation](pipeline/cli.md) for running data processing
+
+### Analysis Workflow
+
+1. Use the [Analysis Template](templates/analysis_report.md) for consistent reporting
+2. Store reports in [reports/findings/](../reports/findings/) following conventions
+
+## External Resources
+
+- [Main GitHub Repository](https://github.com/tim-mcdonnell/march_madness)
+- [sportsdataverse/hoopR-mbb-data](https://github.com/sportsdataverse/hoopR-mbb-data/) - Primary data source
 
 ## Project Overview
 
@@ -73,6 +122,4 @@ uv pip install -e .
 # Run the pipeline
 python run_pipeline.py --create-config
 python run_pipeline.py
-```
-
-For more detailed instructions, see the [Getting Started Guide](user_guide/getting_started.md). 
+``` 

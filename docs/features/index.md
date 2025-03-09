@@ -1,102 +1,139 @@
-# NCAA March Madness Predictor - Features Documentation
+# NCAA March Madness Feature Documentation
 
-## Introduction
-
-This section provides documentation on the features used in the NCAA March Madness Predictor. Features are organized into different sets based on complexity and purpose.
-
-## Implementation Plan
-
-Our feature implementation follows a phased approach as outlined in [Feature Overview](../reference/features/overview.md):
-
-### Current Implementation Status
-
-| Phase | Feature Set | Status | Description |
-|-------|------------|--------|-------------|
-| Phase 1 | [Foundation](foundation.md) | Implemented | Basic performance metrics for teams |
-| Phase 2 | Efficiency Metrics | Planned | Advanced efficiency and tempo-adjusted metrics |
-| Phase 3 | Advanced Metrics | Planned | Player-based and detailed game analysis metrics |
-| Phase 4 | Complex Sequence Analysis | Planned | Detailed play-by-play derived metrics |
-
-## Feature Sets
-
-### [Foundation Features](foundation.md)
-
-The Foundation features provide essential team performance metrics derived from box score data. They include:
-
-- Simple Shooting Metrics (eFG%, TS%, Three-Point Rate, Free Throw Rate)
-- Basic Possession Metrics (Rebound Percentages, Assist Rate, Turnover Percentage)
-- Win Percentage breakdowns (home, away, neutral)
-- Recent Form and Consistency metrics
-- Home Court Advantage rating
-
-## Feature Implementation
-
-All features are implemented using a consistent approach:
-
-1. **Feature Builder**: Each feature set has a corresponding builder class in `src/features/builders/`
-2. **Base Data**: Features build on the processed data files in `data/processed/`
-3. **Output**: Features are saved to `data/features/` as parquet files
-4. **Documentation**: All features are documented in this section
-
-## Usage
-
-To generate features, run:
-
-```bash
-python -m src.features.generate --feature-set <feature_set> --output-dir data/features --output-filename <output_filename>
-```
-
-Where:
-- `<feature_set>` is the name of the feature set to generate (e.g., `foundation`)
-- `<output_filename>` is the name of the output file (default: `team_performance.parquet`)
+This directory contains detailed documentation for each feature in the NCAA March Madness prediction system. Each feature has its own documentation file that follows a standardized format.
 
 ## Feature Organization
 
-Feature columns follow a consistent naming convention:
-
-- Simple metrics use straightforward names (e.g., `efg_pct`)
-- Related metrics are grouped with common prefixes (e.g., `home_win_pct`)
-- Percentage values end with `_pct` or `_rate`
-- Counts or raw values have descriptive suffixes (e.g., `_stddev` for standard deviation)
-
-## Data Flow
-
-The feature generation process follows this data flow:
-
-1. Load processed data from `data/processed/`
-2. Calculate features using feature builder classes
-3. Join features with base team season statistics
-4. Save the resulting features to `data/features/`
-
-## Directory Structure
-
-Features are organized in the repository as follows:
+Features are organized by category in both code and documentation:
 
 ```
 src/features/
-├── __init__.py            - Package initialization
-├── base.py                - Base feature builder class
-├── factory.py             - Factory for creating feature builders
-├── generate.py            - Feature generation script
-└── builders/              - Feature builder implementations
-    ├── __init__.py
-    └── foundation.py      - Foundation feature builder
-
-docs/features/
-├── index.md               - This documentation index
-└── foundation.md          - Foundation features documentation
-
-data/features/             - Generated feature files
-└── team_performance.parquet  - Combined foundation features
+├── core/                       # Core functionality
+├── team_performance/          # Team Performance Metrics (T*)
+├── shooting/                  # Shooting and Scoring Metrics (S*)
+├── advanced_team/             # Advanced Team Metrics (A*)
+├── possession/                # Possession Metrics (P*)
+├── defensive/                 # Defensive Metrics (D*)
+├── matchup/                   # Matchup-Specific Features (M*)
+├── player_based/              # Player-Based Aggregated Metrics (Y*)
+├── tournament/                # Tournament-Specific Metrics (U*)
+├── data_engineering/          # Data Engineering Features (E*)
+└── model_specific/            # Model-Specific Generated Features (G*)
 ```
 
-> **Note:** The foundation features are saved as `team_performance.parquet`. This naming convention reflects the fact that these features represent the core team performance metrics.
+Documentation follows the same structure:
 
-## Next Steps
+```
+docs/features/
+├── team_performance/          # Team Performance Metrics
+├── shooting/                  # Shooting and Scoring Metrics
+└── ... (other categories)
+```
 
-Future feature development will focus on:
+## Feature Naming Convention
 
-1. Implementing Phase 2 (Efficiency Metrics)
-2. Enhancing existing features with opponent adjustments
-3. Adding conference-specific metrics
-4. Developing tournament-specific features 
+Features follow a consistent naming convention:
+
+* **Source code**: `src/features/[category]/[ID]_[feature_name].py`
+* **Documentation**: `docs/features/[category]/[ID]_[feature_name].md`
+
+For example:
+* Source: `src/features/shooting/S01_effective_field_goal_percentage.py`
+* Documentation: `docs/features/shooting/S01_effective_field_goal_percentage.md`
+
+## Feature Structure
+
+Each feature follows these implementation principles:
+
+1. **Inherits from BaseFeature**: All features inherit from the `BaseFeature` class
+2. **Required attributes**: `id`, `name`, `category`, `description`
+3. **Required methods**: `calculate` (additional optional methods include `get_required_data`, `validate_result`, etc.)
+
+Example:
+
+```python
+class EffectiveFieldGoalPercentage(BaseFeature):
+    """Feature class documentation."""
+    
+    id = "S01"  # Unique identifier
+    name = "Effective Field Goal Percentage"  # Human-readable name
+    category = "shooting"  # Category (matches directory name)
+    description = "Field goal percentage adjusted for three-pointers"  # Short description
+    
+    def calculate(self, data):
+        """Calculate the feature from input data."""
+        # Implementation
+        return result
+```
+
+## Data Organization
+
+Features are calculated from processed data (`data/processed/`) and stored in category-specific files:
+
+```
+data/features/
+├── team_performance_metrics.parquet    # All team performance metrics
+├── shooting_metrics.parquet           # All shooting metrics
+├── ... (other category files)
+└── combined/
+    └── full_feature_set.parquet       # Combined features file
+```
+
+## Using Features
+
+You can use the feature system through the pipeline or directly:
+
+### Via Pipeline CLI
+
+```bash
+# Calculate all features
+python run_pipeline.py --stages features
+
+# Calculate specific categories
+python run_pipeline.py --stages features --feature-categories shooting team_performance
+
+# Calculate specific features
+python run_pipeline.py --stages features --feature-ids S01 T01
+```
+
+### Via Python API
+
+```python
+from src.features import calculate_features, initialize_features
+
+# Initialize feature discovery
+initialize_features()
+
+# Calculate all features
+results = calculate_features()
+
+# Calculate specific categories
+results = calculate_features(category="shooting")
+
+# Calculate specific features
+results = calculate_features(feature_ids=["S01", "T01"])
+```
+
+## Available Features
+
+For a complete list of features and their implementation status, see [FEATURES.md](../../FEATURES.md).
+
+## Feature Migration
+
+For a summary of the feature migration from the old system to the new feature framework, see [Migration Summary](migration_summary.md).
+
+## Feature Documentation Format
+
+Each feature documentation file follows a standardized format:
+
+1. **Overview**: Category, complexity, status
+2. **Description**: Detailed explanation of what the feature measures
+3. **Implementation**: Link to implementation file
+4. **Formula/Calculation**: Mathematical formula and code explanation
+5. **Data Requirements**: Input data and required columns
+6. **Implementation Notes**: Considerations, edge cases, optimization
+7. **Interpretation**: Typical range, benchmark values, context
+8. **Usage Examples**: Code examples showing how to use the feature
+9. **Visualization**: Recommended visualization approaches
+10. **Related Features**: Connections to other features
+11. **Version History**: Changes to the implementation 

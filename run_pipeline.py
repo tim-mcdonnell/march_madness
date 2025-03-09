@@ -16,8 +16,20 @@ Example usage:
     # Run data and feature engineering with specific years
     python run_pipeline.py --stages data features --years 2023 2024
     
+    # Calculate specific feature categories
+    python run_pipeline.py --stages features --feature-categories shooting team_performance
+    
+    # Calculate specific features by ID
+    python run_pipeline.py --stages features --feature-ids S01 T01
+    
+    # Overwrite existing feature files
+    python run_pipeline.py --stages features --overwrite-features
+    
     # Clean raw data before running
     python run_pipeline.py --clean-raw
+    
+    # Clean features data before running
+    python run_pipeline.py --clean-features
     
     # Clean all data and run the full pipeline
     python run_pipeline.py --clean-all

@@ -2,6 +2,8 @@
 
 This guide is designed to help AI coding assistants understand the structure, patterns, and workflows of the NCAA March Madness Predictor project. It provides essential context about the codebase organization to help you generate correct, compatible code without requiring the entire codebase as context.
 
+> **Documentation Standards**: When writing or modifying documentation, please follow our [Documentation Guide](documentation_guide.md) which outlines our documentation structure, standards, and best practices.
+
 ## 1. Project Overview
 
 The NCAA March Madness Predictor is a data science project that builds optimal March Madness brackets using historical NCAA men's basketball data. It uses a pipeline-based architecture to:
@@ -90,10 +92,51 @@ This module contains scripts for analyzing data and generating insights:
 
 Transforms processed data into features for model training:
 
-- Team statistics (offensive/defensive efficiency, etc.)
-- Historical tournament performance
-- Match-up specific features
-- Temporal features (trends, momentum)
+- **Feature System Structure**: 
+  - Features are implemented as classes that inherit from `BaseFeature`
+  - Features are organized by category in separate directories
+  - Features are automatically discovered and registered at runtime
+  - Each feature has a unique ID and is part of a category
+  
+- **Key Components**:
+  - `src/features/core/base.py`: Contains the `BaseFeature` abstract base class
+  - `src/features/core/registry.py`: Handles feature registration and discovery
+  - `src/features/core/loader.py`: Loads feature data and manages calculation
+  - `src/features/core/data_manager.py`: Manages feature data storage
+  - `src/pipeline/feature_stage.py`: Integrates features with the pipeline
+
+- **Feature Categories**:
+  - `team_performance/`: Win percentages, point differentials, etc. (T*)
+  - `shooting/`: Shooting and scoring metrics (S*)
+  - `advanced_team/`: Advanced team metrics (A*)
+  - Plus additional categories for different feature types
+  
+- **Feature Implementation**:
+  ```python
+  from src.features.core.base import BaseFeature
+  
+  class EffectiveFieldGoalPercentage(BaseFeature):
+      """Feature class for Effective Field Goal Percentage."""
+      
+      id = "S01"  # Unique identifier
+      name = "Effective Field Goal Percentage"  # Human-readable name
+      category = "shooting"  # Category (matches directory name)
+      description = "Field goal percentage adjusted for three-pointers"
+      
+      def calculate(self, data):
+          """Calculate the feature from input data."""
+          # Implementation
+          return result
+  ```
+
+- **Feature Storage**:
+  - Features are stored in `data/features/{category}_metrics.parquet`
+  - Combined features are stored in `data/features/combined/full_feature_set.parquet`
+
+- **Feature Documentation**:
+  - Complete feature list in `FEATURES.md` at project root
+  - Detailed feature documentation in `docs/features/{category}/{ID}_{feature_name}.md`
+  - Feature system overview in `docs/features/index.md`
 
 ### 3.5 Models (`src/models/`)
 
@@ -223,8 +266,27 @@ python run_pipeline.py --stages data features
 # Process specific years
 python run_pipeline.py --years 2023 2024
 
+# Process specific categories
+python run_pipeline.py --categories team_box player_box
+
+# Calculate specific feature categories
+python run_pipeline.py --stages features --feature-categories shooting team_performance
+
+# Calculate specific features by ID
+python run_pipeline.py --stages features --feature-ids S01 T01
+
+# Overwrite existing feature data
+python run_pipeline.py --stages features --overwrite-features
+
 # Clean data before running
-python run_pipeline.py --clean-raw
+python run_pipeline.py --clean-raw  # Clean raw data
+python run_pipeline.py --clean-all  # Clean all data
+
+# Custom configuration
+python run_pipeline.py --config custom_config.yaml
+
+# Run EDA script
+python -m src.eda.script_name
 ```
 
 ### 5.2 Data Processing Workflow
@@ -575,6 +637,8 @@ def load_team_data(year: int, config: Config) -> pl.DataFrame:
 
 ### 7.3 Feature Engineering Example
 
+> **Feature Structure**: For detailed information about feature organization, implementation requirements, and testing standards, refer to the [Feature Structure and Requirements](feature_structure.md) guide.
+
 ```python
 def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
     """
@@ -618,16 +682,25 @@ def calculate_offensive_rating(team_stats: pl.DataFrame) -> pl.DataFrame:
 # Full pipeline
 python run_pipeline.py
 
-# Specific stages
+# Run only specific stages
 python run_pipeline.py --stages data features
 
-# Specific years
+# Process specific years
 python run_pipeline.py --years 2023 2024
 
-# Specific categories
+# Process specific categories
 python run_pipeline.py --categories team_box player_box
 
-# Clean data
+# Calculate specific feature categories
+python run_pipeline.py --stages features --feature-categories shooting team_performance
+
+# Calculate specific features by ID
+python run_pipeline.py --stages features --feature-ids S01 T01
+
+# Overwrite existing feature data
+python run_pipeline.py --stages features --overwrite-features
+
+# Clean data before running
 python run_pipeline.py --clean-raw  # Clean raw data
 python run_pipeline.py --clean-all  # Clean all data
 

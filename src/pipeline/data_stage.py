@@ -38,6 +38,124 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+class BaseDataStage:
+    """Base class for pipeline data stages.
+    
+    This class serves as a foundation for all pipeline stages,
+    providing common initialization and configuration handling.
+    """
+    
+    def __init__(
+        self,
+        data_dir: str = "data",
+        config: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the base pipeline stage.
+        
+        Args:
+            data_dir: Base data directory.
+            config: Configuration for the stage.
+        """
+        self.data_dir = Path(data_dir)
+        self.config = config or {}
+        
+    def run(self) -> bool:
+        """Run the pipeline stage.
+        
+        This method should be implemented by subclasses.
+        
+        Returns:
+            True if the stage ran successfully, False otherwise.
+        """
+        raise NotImplementedError("Subclasses must implement run()")
+
+
+class DataStage(BaseDataStage):
+    """Pipeline stage for data collection, validation, and processing.
+    
+    This stage handles downloading raw data, validating it,
+    and processing it into normalized formats for feature engineering.
+    """
+    
+    def __init__(
+        self,
+        data_dir: str = "data",
+        config: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the data stage.
+        
+        Args:
+            data_dir: Base data directory
+            config: Configuration for the stage
+        """
+        super().__init__(data_dir, config)
+        
+        # Set up directory paths
+        if self.config and "data" in self.config:
+            self.raw_dir = Path(self.config["data"].get("raw_dir", self.data_dir / "raw"))
+            self.processed_dir = Path(self.config["data"].get("processed_dir", self.data_dir / "processed"))
+        else:
+            self.raw_dir = self.data_dir / "raw"
+            self.processed_dir = self.data_dir / "processed"
+        
+        # Create directories
+        self.raw_dir.mkdir(parents=True, exist_ok=True)
+        self.processed_dir.mkdir(parents=True, exist_ok=True)
+    
+    def run(
+        self,
+        years: list[int] | None = None,
+        categories: list[str] | None = None,
+    ) -> bool:
+        """Run the data stage.
+        
+        This method handles the full data pipeline:
+        1. Download raw data
+        2. Validate data
+        3. Process transformations
+        
+        Args:
+            years: List of years to process (overrides config)
+            categories: List of data categories to process (overrides config)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        logger.info("Starting data collection and cleaning stage")
+        
+        # Get years and categories from config if not specified
+        if self.config and "data" in self.config:
+            config_years = self.config["data"].get("years", [])
+            config_categories = self.config["data"].get("categories", [])
+        else:
+            config_years = []
+            config_categories = []
+        
+        # Use provided values or fall back to config
+        years = years or config_years
+        categories = categories or config_categories
+        
+        # Call the run function to download data
+        download_results = run(self.config, years, categories)
+        
+        if not download_results:
+            logger.error("Data download failed, stopping pipeline")
+            return False
+        
+        # Validate downloaded data
+        if not validate_downloaded_data(self.config):
+            logger.error("Data validation failed, stopping pipeline")
+            return False
+        
+        # Process data for analysis
+        if not process_transformations(self.config):
+            logger.error("Data processing failed, stopping pipeline")
+            return False
+        
+        logger.info("Data stage completed successfully")
+        return True
+
+
 def run(
     config: dict[str, Any], 
     years: list[int] | None = None, 
@@ -290,9 +408,13 @@ def process_transformations(config: dict[str, Any]) -> bool:
         return False
 
 
+# Adding run_data_stage function for backward compatibility with tests
 def run_data_stage(config: dict[str, Any]) -> bool:
     """
-    Run the data collection and cleaning stage.
+    Run the data stage pipeline for backward compatibility with tests.
+    
+    This is a wrapper around the DataStage class's run method to maintain
+    compatibility with existing tests.
     
     Args:
         config: Pipeline configuration
@@ -300,31 +422,17 @@ def run_data_stage(config: dict[str, Any]) -> bool:
     Returns:
         True if the stage completed successfully, False otherwise
     """
-    logger.info("Starting data collection and cleaning stage")
+    # Extract years and categories from config
+    years = None
+    categories = None
     
-    # Download the data
-    years = config.get("data", {}).get("years", [])
-    categories = config.get("data", {}).get("categories", [])
+    if 'data' in config:
+        years = config.get('data', {}).get('years')
+        categories = config.get('data', {}).get('categories')
     
-    # Call the run function to download data
-    download_results = run(config, years, categories)
-    
-    if not download_results:
-        logger.error("Data download failed, stopping pipeline")
-        return False
-    
-    # Validate downloaded data
-    if not validate_downloaded_data(config):
-        logger.error("Data validation failed, stopping pipeline")
-        return False
-    
-    # Process data for analysis
-    if not process_transformations(config):
-        logger.error("Data processing failed, stopping pipeline")
-        return False
-    
-    logger.info("Data stage completed successfully")
-    return True
+    # Create and run the data stage
+    data_stage = DataStage(config=config)
+    return data_stage.run(years=years, categories=categories)
 
 
 if __name__ == "__main__":
