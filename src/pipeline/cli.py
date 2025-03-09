@@ -29,7 +29,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--stages", 
         nargs="+", 
-        choices=["data", "eda", "features", "model", "evaluate", "all"],
+        choices=["data", "eda", "features", "model", "evaluate", "team_master", "all"],
         default=["all"], 
         help="Pipeline stages to run"
     )
@@ -94,9 +94,15 @@ def create_parser() -> argparse.ArgumentParser:
     )
     
     parser.add_argument(
+        "--clean-master", 
+        action="store_true",
+        help="Purge team master data before running (only use this if you need to rebuild the team master data)"
+    )
+    
+    parser.add_argument(
         "--clean-all", 
         action="store_true",
-        help="Purge all data before running"
+        help="Purge all data before running (note: does not include team master data)"
     )
     
     # Configuration options
@@ -126,6 +132,20 @@ def create_parser() -> argparse.ArgumentParser:
         help="Logging level"
     )
     
+    # Team master options
+    parser.add_argument(
+        "--test-team-id",
+        type=int,
+        help="Test the team master stage with a single team ID"
+    )
+    
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=50,
+        help="Number of teams to process in each batch for the team master stage"
+    )
+    
     return parser
 
 
@@ -148,6 +168,8 @@ def _handle_data_purging(args: argparse.Namespace, config: dict[str, Any]) -> No
             purge_data("features", config)
         if args.clean_models:
             purge_data("models", config)
+        if args.clean_master:
+            purge_data("master", config)
 
 
 def _run_pipeline_stage(
@@ -184,6 +206,19 @@ def _run_pipeline_stage(
         
         # Run the data stage with just the config (for test compatibility)
         success = run_data_stage(config)
+        return {"success": success}
+    
+    if stage_name == "team_master":
+        # Import here to avoid circular imports
+        from src.pipeline.team_master_stage import run_team_master_stage
+        logger.info("Running team master data population stage")
+        
+        # Get test_team_id if provided
+        test_team_id = getattr(args, 'test_team_id', None)
+        batch_size = getattr(args, 'batch_size', 50)
+        
+        # Run the team master stage
+        success = run_team_master_stage(config, test_team_id, batch_size)
         return {"success": success}
     
     if stage_name == "features":
@@ -237,6 +272,7 @@ def process_args(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, 
     # Determine which stages to run
     stages_to_run = args.stages
     if "all" in stages_to_run:
+        # Note: 'team_master' is NOT included in 'all' since it's an adhoc stage
         stages_to_run = ["data", "eda", "features", "model", "evaluate"]
     
     # Run the pipeline stages

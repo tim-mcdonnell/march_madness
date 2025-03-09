@@ -232,7 +232,11 @@ python run_pipeline.py --categories team_box player_box
 
 # Clean data before running
 python run_pipeline.py --clean-raw      # Clean raw data
-python run_pipeline.py --clean-all      # Clean all data
+python run_pipeline.py --clean-processed # Clean processed data
+python run_pipeline.py --clean-features  # Clean feature data
+python run_pipeline.py --clean-models    # Clean model data
+python run_pipeline.py --clean-master    # Clean team master data (use with caution)
+python run_pipeline.py --clean-all      # Clean all data (except team master)
 
 # Use a custom configuration
 python run_pipeline.py --config custom_config.yaml

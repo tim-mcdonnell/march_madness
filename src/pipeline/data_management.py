@@ -22,7 +22,7 @@ def purge_data(
     Purge data of a specific type.
     
     Args:
-        data_type: Type of data to purge (raw, processed, features, models, all)
+        data_type: Type of data to purge (raw, processed, features, models, master, all)
         config: Pipeline configuration
         categories: Specific data categories to purge, or None for all
         years: Specific years to purge, or None for all
@@ -30,14 +30,14 @@ def purge_data(
     Raises:
         ValueError: If data_type is invalid
     """
-    valid_types = ["raw", "processed", "features", "models", "all"]
+    valid_types = ["raw", "processed", "features", "models", "master", "all"]
     if data_type not in valid_types:
         raise ValueError(
             f"Invalid data type: {data_type}. Must be one of {valid_types}"
         )
     
     if data_type == "all":
-        # Purge all data types
+        # Purge all data types (except master, which needs explicit purging)
         for dtype in ["raw", "processed", "features", "models"]:
             purge_data(dtype, config, categories, years)
         return
@@ -52,6 +52,8 @@ def purge_data(
         purge_feature_data(config)
     elif data_type == "models":
         purge_model_data(config)
+    elif data_type == "master":
+        purge_master_data(config)
 
 
 def purge_raw_data(
@@ -282,4 +284,27 @@ def ensure_directories(config: dict[str, Any]) -> None:
     
     # Evaluation directory
     if "evaluation" in config and "output_dir" in config["evaluation"]:
-        Path(config["evaluation"]["output_dir"]).mkdir(parents=True, exist_ok=True) 
+        Path(config["evaluation"]["output_dir"]).mkdir(parents=True, exist_ok=True)
+
+
+def purge_master_data(config: dict[str, Any]) -> None:
+    """
+    Purge team master data files.
+    
+    Args:
+        config: Pipeline configuration
+    """
+    master_dir = Path(config.get("data", {}).get("master_dir", "data/master"))
+    
+    if not master_dir.exists():
+        logger.warning(f"Team master directory does not exist: {master_dir}")
+        return
+    
+    logger.warning("Purging team master data - this will require rebuilding the entire team master dataset")
+    
+    # Delete all files in master directory
+    for file_path in master_dir.glob("*.parquet"):
+        logger.info(f"Deleting master file: {file_path}")
+        file_path.unlink()
+    
+    logger.info(f"Purged team master files in {master_dir}") 
