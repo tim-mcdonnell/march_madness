@@ -56,8 +56,7 @@ class TeamMasterStage:
         self.master_data_dir = Path(data_dir) / "master"
         self.master_data_dir.mkdir(exist_ok=True, parents=True)
         
-        # Set up file paths
-        self.base_output_file = self.master_data_dir / "team_master_base.parquet"
+        # Set up file path (single file approach)
         self.output_file = self.master_data_dir / "team_master.parquet"
     
     def _extract_unique_team_ids(self) -> dict[int, set[int]]:
@@ -131,42 +130,41 @@ class TeamMasterStage:
         logger.info(f"Extracted {len(team_seasons)} unique team IDs across all raw data files")
         return team_seasons
     
-    def _create_base_master_file(self, team_seasons: dict[int, set[int]]) -> None:
+    def _create_master_file(self, team_seasons: dict[int, set[int]]) -> None:
         """
-        Create and save a base master data file with team IDs and seasons.
+        Create and save a master data file with team IDs and seasons.
         
         Args:
             team_seasons: Dictionary mapping team IDs to a set of seasons
         """
-        logger.info("Creating base master data file...")
+        logger.info("Creating team master data file...")
         
         # Create rows for team/season combinations
         rows = []
         for team_id, seasons in team_seasons.items():
             for season in seasons:
-                rows.append({"team_id": team_id, "season": season})
+                rows.append({
+                    "team_id": team_id, 
+                    "season": season,
+                    "location": "",  # Empty string instead of None
+                    "name": ""       # Empty string instead of None
+                })
         
         if rows:
-            # Create DataFrame
-            df = pl.DataFrame(rows)
+            # Define schema explicitly with appropriate types
+            schema = {
+                "team_id": pl.Int64,
+                "season": pl.Int64,
+                "location": pl.Utf8,
+                "name": pl.Utf8
+            }
             
-            # Add placeholder columns
-            df = df.with_columns([
-                pl.lit(None).alias("location"),
-                pl.lit(None).alias("name"),
-                pl.lit(None).alias("short_name"),
-                pl.lit(None).alias("abbreviation"),
-                pl.lit(None).alias("display_name"),
-                pl.lit(None).alias("conference_id"),
-                pl.lit(None).alias("conference_name"),
-                pl.lit(None).alias("logo_url"),
-                pl.lit(None).alias("color"),
-                pl.lit(None).alias("alternate_color"),
-            ])
+            # Create DataFrame with schema
+            df = pl.DataFrame(rows, schema=schema)
             
-            # Save base master data
-            df.write_parquet(self.base_output_file)
-            logger.info(f"Base master data saved to {self.base_output_file}")
+            # Save master data
+            df.write_parquet(self.output_file)
+            logger.info(f"Initial team master data saved to {self.output_file}")
         else:
             logger.error("No team data was collected")
     
@@ -226,7 +224,12 @@ class TeamMasterStage:
         Returns:
             Dictionary with processed team data fields
         """
-        result = {}
+        # Initialize with default values to ensure all fields are present
+        result = {
+            "team_id": team_id,
+            "location": "",
+            "name": ""
+        }
         
         try:
             # Check if there's team data
@@ -236,23 +239,8 @@ class TeamMasterStage:
             team_data = data["team"]
             
             # Extract basic team info
-            result["team_id"] = team_id
             result["location"] = team_data.get("location", "")
             result["name"] = team_data.get("name", "")
-            result["short_name"] = team_data.get("shortDisplayName", "")
-            result["abbreviation"] = team_data.get("abbreviation", "")
-            result["display_name"] = team_data.get("displayName", "")
-            result["color"] = team_data.get("color", "")
-            result["alternate_color"] = team_data.get("alternateColor", "")
-            
-            # Extract conference info if available
-            if "conference" in team_data:
-                result["conference_id"] = team_data["conference"].get("id", "")
-                result["conference_name"] = team_data["conference"].get("name", "")
-            
-            # Extract logo URL if available
-            if "logos" in team_data and team_data["logos"]:
-                result["logo_url"] = team_data["logos"][0].get("href", "")
                 
         except Exception as e:
             logger.error(f"Error processing ESPN data for team ID {team_id}: {e}")
@@ -269,227 +257,146 @@ class TeamMasterStage:
         Returns:
             True if successful, False otherwise
         """
-        # Check if base master file exists
-        if not self.base_output_file.exists():
-            logger.error(f"Base master file not found: {self.base_output_file}")
+        # Check if master file exists
+        if not self.output_file.exists():
+            logger.error(f"Master file not found: {self.output_file}")
             return False
             
-        logger.info(f"Enriching team master data from {self.base_output_file}")
+        logger.info(f"Enriching team master data from {self.output_file}")
         
         try:
-            # Load base master data
-            df = pl.read_parquet(self.base_output_file)
+            # Load master data
+            df = pl.read_parquet(self.output_file)
             
-            # See if we have an existing enriched file to use as starting point
-            if self.output_file.exists():
-                logger.info(f"Found existing enriched data: {self.output_file}")
-                enriched_df = pl.read_parquet(self.output_file)
-                
-                # Identify teams that already have data
-                # We'll only process teams that don't have a location
-                has_data = set(
-                    enriched_df
-                    .filter(pl.col("location").is_not_null())
-                    .select("team_id")
-                    .unique()
-                    .to_series()
-                    .to_list()
-                )
-                
-                logger.info(f"Found {len(has_data)} teams with existing data")
-                
-                # Create a new dataframe with updates
+            # Identify teams that need data
+            # We'll only process teams that have empty location strings
+            needs_data = df.filter(pl.col("location") == "")
+            
+            # Get unique team IDs that don't have data yet
+            teams_to_update = set(
+                needs_data
+                .select("team_id")
+                .unique()
+                .to_series()
+                .to_list()
+            )
+            
+            # Process teams in batches
+            logger.info(f"Enriching {len(teams_to_update)} teams with ESPN data")
+            
+            if teams_to_update:
                 team_updates = {}
                 
-                # Get unique team IDs that don't have data yet
-                teams_to_update = set(
-                    df.filter(~pl.col("team_id").is_in(has_data))
-                    .select("team_id")
-                    .unique()
-                    .to_series()
-                    .to_list()
-                )
-                
-                # Process teams in batches
-                logger.info(f"Enriching {len(teams_to_update)} teams with ESPN data")
-                
-                if teams_to_update:
-                    for count, team_id in enumerate(teams_to_update, 1):
-                        if count % 10 == 0:
-                            logger.info(f"Processing team {count}/{len(teams_to_update)}")
-                            
-                        # Fetch and process team data
-                        espn_data = self._fetch_team_data_from_espn(team_id)
-                        processed_data = self._process_espn_response(team_id, espn_data)
+                for count, team_id in enumerate(teams_to_update, 1):
+                    if count % 10 == 0:
+                        logger.info(f"Processing team {count}/{len(teams_to_update)}")
                         
-                        if processed_data and "location" in processed_data:
-                            team_updates[team_id] = processed_data
-                            
-                        # Save in batches
-                        if len(team_updates) >= batch_size:
-                            # Create a DataFrame with the updated team data
-                            updates_df = pl.DataFrame(list(team_updates.values()))
-                            
-                            # Filter out the rows in enriched_df that have team_ids in updates_df
-                            team_ids_to_update = updates_df["team_id"].unique().to_list()
-                            
-                            # For each team in updates, get seasons from base file
-                            updated_rows = []
-                            for update_team_id in team_ids_to_update:
-                                # Get the team data from updates_df
-                                update_team_data = updates_df.filter(pl.col("team_id") == update_team_id)
-                                if update_team_data.height > 0:
-                                    # Convert the row to a dictionary
-                                    team_data_dict = {}
-                                    row = update_team_data.row(0)
-                                    for i, col in enumerate(update_team_data.columns):
-                                        team_data_dict[col] = row[i]
-                                
-                                    # Get all seasons for this team from the original dataframe
-                                    seasons = enriched_df.filter(
-                                        pl.col("team_id") == update_team_id
-                                    )["season"].to_list()
-                                    
-                                    # Create a row for each season with the updated team data
-                                    for season in seasons:
-                                        row_data = team_data_dict.copy()
-                                        row_data["season"] = season
-                                        updated_rows.append(row_data)
-                            
-                            if updated_rows:
-                                # Convert to DataFrame
-                                updated_rows_df = pl.DataFrame(updated_rows)
-                                
-                                # Remove the rows that will be updated
-                                filtered_df = enriched_df.filter(
-                                    ~((pl.col("team_id").is_in(team_ids_to_update)) & 
-                                      (pl.col("location").is_null()))
-                                )
-                                
-                                # Combine the filtered original data with the updates
-                                enriched_df = pl.concat([filtered_df, updated_rows_df])
-                                
-                                # Save updates
-                                enriched_df.write_parquet(self.output_file)
-                                logger.info(f"Saved batch of {len(team_updates)} team updates")
-                                
-                            team_updates = {}
-                            
-                    # Save any remaining updates
-                    if team_updates:
-                        # Create a DataFrame with the updated team data
-                        updates_df = pl.DataFrame(list(team_updates.values()))
-                        
-                        # Filter out the rows in enriched_df that have team_ids in updates_df
-                        team_ids_to_update = updates_df["team_id"].unique().to_list()
-                        
-                        # For each team in updates, get seasons from base file
-                        updated_rows = []
-                        for update_team_id in team_ids_to_update:
-                            # Get the team data from updates_df
-                            update_team_data = updates_df.filter(pl.col("team_id") == update_team_id)
-                            if update_team_data.height > 0:
-                                # Convert the row to a dictionary
-                                team_data_dict = {}
-                                row = update_team_data.row(0)
-                                for i, col in enumerate(update_team_data.columns):
-                                    team_data_dict[col] = row[i]
-                            
-                                # Get all seasons for this team from the original dataframe
-                                seasons = enriched_df.filter(
-                                    pl.col("team_id") == update_team_id
-                                )["season"].to_list()
-                                
-                                # Create a row for each season with the updated team data
-                                for season in seasons:
-                                    row_data = team_data_dict.copy()
-                                    row_data["season"] = season
-                                    updated_rows.append(row_data)
-                        
-                        if updated_rows:
-                            # Convert to DataFrame
-                            updated_rows_df = pl.DataFrame(updated_rows)
-                            
-                            # Remove the rows that will be updated
-                            filtered_df = enriched_df.filter(
-                                ~((pl.col("team_id").is_in(team_ids_to_update)) & 
-                                  (pl.col("location").is_null()))
-                            )
-                            
-                            # Combine the filtered original data with the updates
-                            enriched_df = pl.concat([filtered_df, updated_rows_df])
-                            
-                            # Save updates
-                            enriched_df.write_parquet(self.output_file)
-                            logger.info(f"Saved final batch of {len(team_updates)} team updates")
-                
-                return True
-                
-            # Start fresh - we don't have an existing enriched file
-            logger.info("Creating new enriched team master file")
-            
-            # Get unique team IDs
-            unique_team_ids = df.select("team_id").unique().to_series().to_list()
-            logger.info(f"Processing {len(unique_team_ids)} unique teams")
-            
-            # Process teams
-            team_data = []
-            
-            for count, team_id in enumerate(unique_team_ids, 1):
-                if count % 10 == 0:
-                    logger.info(f"Processing team {count}/{len(unique_team_ids)}")
+                    # Fetch and process team data
+                    espn_data = self._fetch_team_data_from_espn(team_id)
+                    processed_data = self._process_espn_response(team_id, espn_data)
                     
-                # Fetch and process team data
-                espn_data = self._fetch_team_data_from_espn(team_id)
-                processed_data = self._process_espn_response(team_id, espn_data)
-                
-                if processed_data:
-                    # Get all seasons for this team
-                    seasons = df.filter(pl.col("team_id") == team_id).select("season").to_series().to_list()
-                    
-                    # Add each team/season combo with the team data
-                    for season in seasons:
-                        row = processed_data.copy()
-                        row["season"] = season
-                        team_data.append(row)
+                    if processed_data and processed_data["location"] != "":
+                        team_updates[team_id] = processed_data
                         
-                # Save in batches
-                if len(team_data) >= batch_size:
-                    batch_df = pl.DataFrame(team_data)
-                    
-                    if self.output_file.exists():
-                        # Append to existing file
-                        existing_df = pl.read_parquet(self.output_file)
-                        combined_df = pl.concat([existing_df, batch_df])
-                        combined_df.write_parquet(self.output_file)
-                    else:
-                        # Create new file
-                        batch_df.write_parquet(self.output_file)
+                    # Save in batches
+                    if len(team_updates) >= batch_size:
+                        self._update_master_file(df, team_updates)
+                        # Reload the data after update
+                        df = pl.read_parquet(self.output_file)
+                        team_updates = {}
                         
-                    logger.info(f"Saved batch of {len(team_data)} team records")
-                    team_data = []
-                    
-            # Save any remaining data
-            if team_data:
-                batch_df = pl.DataFrame(team_data)
-                
-                if self.output_file.exists():
-                    # Append to existing file
-                    existing_df = pl.read_parquet(self.output_file)
-                    combined_df = pl.concat([existing_df, batch_df])
-                    combined_df.write_parquet(self.output_file)
-                else:
-                    # Create new file
-                    batch_df.write_parquet(self.output_file)
-                    
-                logger.info(f"Saved final batch of {len(team_data)} team records")
+                # Save any remaining updates
+                if team_updates:
+                    self._update_master_file(df, team_updates)
             
             return True
-        
+                
         except Exception as e:
             logger.exception(f"Error enriching team data: {e}")
             return False
-            
+    
+    def _update_master_file(self, df: pl.DataFrame, team_updates: dict[int, dict[str, Any]]) -> None:
+        """
+        Update the master file with team data.
+        
+        Args:
+            df: Current master data DataFrame
+            team_updates: Dictionary of team_id -> team data updates
+        """
+        if not team_updates:
+            return
+        
+        # Get the schema from the original DataFrame
+        schema = df.schema
+        
+        # Create a DataFrame with the updated team data
+        updates_df = pl.DataFrame(list(team_updates.values()))
+        
+        # Get the columns from the original DataFrame to ensure consistency
+        original_columns = df.columns
+        
+        team_ids_to_update = updates_df["team_id"].unique().to_list()
+        updated_rows = []
+        
+        for update_team_id in team_ids_to_update:
+            # Get the team data from updates_df
+            update_team_data = updates_df.filter(pl.col("team_id") == update_team_id)
+            if update_team_data.height > 0:
+                # Get all seasons for this team from the original dataframe
+                seasons = df.filter(
+                    pl.col("team_id") == update_team_id
+                )["season"].to_list()
+                
+                # Create a row for each season with the updated team data
+                for season in seasons:
+                    # Start with a dictionary with empty values (not None)
+                    row_data = {
+                        "team_id": update_team_id,
+                        "season": season,
+                        "location": "",
+                        "name": ""
+                    }
+                    
+                    # Update with values from the ESPN data
+                    for col in updates_df.columns:
+                        if col in original_columns and col in update_team_data.columns:
+                            value = update_team_data[col][0]
+                            # Ensure non-null values for string columns
+                            if isinstance(schema[col], pl.Utf8) and value is None:
+                                value = ""
+                            row_data[col] = value
+                    
+                    updated_rows.append(row_data)
+        
+        if updated_rows:
+            try:
+                # Create DataFrame with same schema as original
+                updated_rows_df = pl.DataFrame(updated_rows, schema=schema)
+                
+                # Remove the rows that will be updated
+                filtered_df = df.filter(
+                    ~((pl.col("team_id").is_in(team_ids_to_update)) & 
+                      (pl.col("location") == ""))
+                )
+                
+                # Combine the filtered original data with the updates
+                combined_df = pl.concat([filtered_df, updated_rows_df])
+                
+                # Save updates
+                combined_df.write_parquet(self.output_file)
+                logger.info(f"Saved batch of {len(team_updates)} team updates")
+                
+            except Exception as e:
+                logger.error(f"Error updating master file: {e}")
+                # Dump problematic data for debugging
+                problematic_data = {
+                    "original_schema": {k: str(v) for k, v in schema.items()},
+                    "update_columns": updates_df.columns,
+                    "sample_row": updated_rows[0] if updated_rows else None
+                }
+                logger.debug(f"Problematic data: {problematic_data}")
+                raise
+    
     def run(self, batch_size: int = 50) -> bool:
         """
         Run the complete team master data stage.
@@ -501,11 +408,15 @@ class TeamMasterStage:
             True if successful, False otherwise
         """
         try:
-            # Step 1: Extract unique team IDs from raw data
-            team_seasons = self._extract_unique_team_ids()
-            
-            # Step 2: Create base master file
-            self._create_base_master_file(team_seasons)
+            # First, check if we need to create the initial file
+            if not self.output_file.exists():
+                # Step 1: Extract unique team IDs from raw data
+                team_seasons = self._extract_unique_team_ids()
+                
+                # Step 2: Create master file with placeholder values
+                self._create_master_file(team_seasons)
+            else:
+                logger.info(f"Using existing master file: {self.output_file}")
             
             # Step 3: Enrich with ESPN API data
             return self._enrich_team_data(batch_size=batch_size)
@@ -522,7 +433,9 @@ def run_team_master_stage(config: dict[str, Any], test_team_id: int | None = Non
     Args:
         config: Pipeline configuration
         test_team_id: Team ID to use for testing
-        batch_size: Number of teams to process in one batch
+        batch_size: Number of teams to process in one batch before saving progress.
+                    Lower values (e.g., 10) reduce memory usage and save more frequently,
+                    while higher values are more efficient but risk more data loss on failure.
         
     Returns:
         True if successful, False otherwise

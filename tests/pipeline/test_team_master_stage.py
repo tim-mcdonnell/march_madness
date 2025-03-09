@@ -107,18 +107,11 @@ def test_process_espn_response(mock_espn_response) -> None:
     # Process response
     result = stage._process_espn_response(101, mock_espn_response)
     
-    # Verify basic info extraction
+    # Verify basic info extraction - only check the fields we kept
     assert result["team_id"] == 101
     assert result["location"] == "Test University"
     assert result["name"] == "Bulldogs"
-    assert result["abbreviation"] == "TEST"
-    assert result["display_name"] == "Test University Bulldogs"
-    assert result["short_name"] == "Test"
-    assert result["color"] == "123456"
-    assert result["alternate_color"] == "ABCDEF"
-    assert result["logo_url"] == "https://example.com/logo.png"
-    assert result["conference_id"] == "1"
-    assert result["conference_name"] == "Test Conference"
+    # No longer checking for fields we removed
 
 
 @patch("src.pipeline.team_master_stage.requests.get")
@@ -150,15 +143,15 @@ def test_fetch_team_data_from_espn_error(mock_fetch, stage) -> None:
     # Setup mock to return empty dict on error
     mock_fetch.return_value = {}
     
-    # Create a test base file
-    base_file_path = stage.master_data_dir / "team_master_base.parquet"
+    # Create a test master file with empty strings instead of None
+    master_file_path = stage.master_data_dir / "team_master.parquet"
     df = pl.DataFrame({
         "team_id": [101, 102],
         "season": [2023, 2023],
-        "location": [None, None],
-        "name": [None, None]
+        "location": ["", ""],  # Empty strings instead of None
+        "name": ["", ""]       # Empty strings instead of None
     })
-    df.write_parquet(base_file_path)
+    df.write_parquet(master_file_path)
     
     # Should still complete without error
     assert stage._enrich_team_data() is True
@@ -178,12 +171,7 @@ def test_simple_integration(mock_get, mock_config, test_data_dir, mock_raw_data)
                 "id": str(team_id),
                 "location": f"University {team_id}",
                 "name": f"Team {team_id}",
-                "displayName": f"University {team_id} Team {team_id}",
-                "abbreviation": f"T{team_id}",
-                "color": "123456",
-                "alternateColor": "ABCDEF",
-                "logos": [{"href": f"https://example.com/logo-{team_id}.png"}],
-                "conference": {"id": "1", "name": "Test Conference"}
+                # Simplified response with only fields we care about
             }
         }
         return mock_response
@@ -201,16 +189,15 @@ def test_simple_integration(mock_get, mock_config, test_data_dir, mock_raw_data)
     
     assert result is True
     
-    # Verify base file was created
-    base_file = test_data_dir / "master" / "team_master_base.parquet"
-    assert base_file.exists()
-    
-    # Verify enriched file was created
+    # Verify only the master file was created (we no longer use base file)
     enriched_file = test_data_dir / "master" / "team_master.parquet"
     assert enriched_file.exists()
     
     # Verify content
     df = pl.read_parquet(enriched_file)
+    
+    # Check schema has only the 4 columns we expect
+    assert set(df.columns) == {"team_id", "season", "location", "name"}
     
     # Unique team IDs
     unique_teams = df.select("team_id").unique()
