@@ -44,7 +44,7 @@ class HomeCourtAdvantage(BaseFeature):
         Returns:
             List of data source names required by this feature.
         """
-        return ["team_box"]
+        return ["team_box", "schedules"]
     
     def calculate(self, data: pl.DataFrame | dict[str, pl.DataFrame]) -> pl.DataFrame:
         """Calculate Home Court Advantage.
@@ -61,8 +61,13 @@ class HomeCourtAdvantage(BaseFeature):
             if "team_box" not in data:
                 raise ValueError("team_box data is required for Home Court Advantage calculation")
             team_box = data["team_box"]
+            schedules = data.get("schedules")
         else:
             team_box = data
+            schedules = None
+        
+        # Log available columns to help with debugging
+        logger.info(f"Team box columns: {team_box.columns}")
             
         # Verify required columns are present
         required_cols = [
@@ -76,6 +81,34 @@ class HomeCourtAdvantage(BaseFeature):
         # Check for team_display_name column
         has_display_name = "team_display_name" in team_box.columns
         
+        # Process with neutral site data if available
+        if schedules is not None and "neutral_site" in schedules.columns:
+            logger.info("Enhancing Home Court Advantage calculation with neutral site information")
+            
+            # Extract neutral site games
+            neutral_games = (
+                schedules
+                .filter(pl.col("neutral_site"))
+                .select(["game_id", "neutral_site"])
+            )
+            
+            # Join with team_box to identify neutral games
+            team_box = (
+                team_box
+                .join(neutral_games, on="game_id", how="left")
+                .with_columns([
+                    pl.when(pl.col("neutral_site"))
+                    .then(pl.lit("neutral"))
+                    .otherwise(pl.col("venue_type"))
+                    .alias("game_venue_type")
+                ])
+            )
+        else:
+            # If no schedules data, just use venue_type directly
+            team_box = team_box.with_columns([
+                pl.col("venue_type").alias("game_venue_type")
+            ])
+        
         # Create base group columns
         group_cols = ["team_id", "team_name", "season"]
         if has_display_name:
@@ -84,7 +117,7 @@ class HomeCourtAdvantage(BaseFeature):
         # Calculate point differential for home games
         home_games = (
             team_box
-            .filter(pl.col("venue_type") == "home")
+            .filter(pl.col("game_venue_type") == "home")
             .group_by(group_cols)
             .agg([
                 pl.len().alias("home_games"),
@@ -98,7 +131,7 @@ class HomeCourtAdvantage(BaseFeature):
         # Calculate point differential for away games
         away_games = (
             team_box
-            .filter(pl.col("venue_type") == "away")
+            .filter(pl.col("game_venue_type") == "away")
             .group_by(group_cols)
             .agg([
                 pl.len().alias("away_games"),
