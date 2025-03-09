@@ -49,6 +49,25 @@ def create_parser() -> argparse.ArgumentParser:
         help="Data categories to process (default: all)"
     )
     
+    # Feature calculation options
+    parser.add_argument(
+        "--feature-categories",
+        nargs="+",
+        help="Feature categories to calculate (e.g., 'shooting', 'team_performance')"
+    )
+    
+    parser.add_argument(
+        "--feature-ids",
+        nargs="+",
+        help="Specific feature IDs to calculate (e.g., 'S01', 'T01')"
+    )
+    
+    parser.add_argument(
+        "--overwrite-features",
+        action="store_true",
+        help="Overwrite existing feature files"
+    )
+    
     # Clean/purge options
     parser.add_argument(
         "--clean-raw", 
@@ -151,13 +170,40 @@ def _run_pipeline_stage(
         # Import here to avoid circular imports
         from src.pipeline.data_stage import run_data_stage
         logger.info("Running data collection and cleaning stage")
-        return {"success": run_data_stage(config)}
+        
+        # Update config with command line args if provided
+        if hasattr(args, 'years') and args.years is not None:
+            if 'data' not in config:
+                config['data'] = {}
+            config['data']['years'] = args.years
+        
+        if hasattr(args, 'categories') and args.categories is not None:
+            if 'data' not in config:
+                config['data'] = {}
+            config['data']['categories'] = args.categories
+        
+        # Run the data stage with just the config (for test compatibility)
+        success = run_data_stage(config)
+        return {"success": success}
     
     if stage_name == "features":
         # Import here to avoid circular imports
-        from src.pipeline.feature_stage import run_feature_stage
+        from src.pipeline.feature_stage import FeatureCalculationStage
+        
         logger.info("Running feature engineering stage")
-        return {"success": run_feature_stage(config)}
+        
+        # Extract feature configuration options
+        data_dir = config.get("data", {}).get("data_dir", "data")
+        feature_stage = FeatureCalculationStage(data_dir=data_dir, config=config)
+        
+        # Run the feature calculation with command line options
+        success = feature_stage.run(
+            categories=args.feature_categories,
+            feature_ids=args.feature_ids,
+            overwrite=args.overwrite_features
+        )
+        
+        return {"success": success}
     
     # Placeholder stages - not yet implemented
     stage_modules = {

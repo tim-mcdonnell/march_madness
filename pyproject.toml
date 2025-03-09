@@ -63,6 +63,8 @@ ignore = ["ANN001", "ANN003", "C901"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S101"]
 "src/eda/**/*.py" = ["E501"]
+"src/features/**/*.py" = ["N999"]
+"tests/features/**/*.py" = ["N999"]
 
 [tool.ruff.format]
 quote-style = "double"

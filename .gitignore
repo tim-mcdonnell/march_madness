@@ -52,10 +52,6 @@ data/processed/
 # Only exception: keep small static data, example data files, and metadata
 !data/static/
 !data/static/*.json
-!data/raw/example/
-!data/raw/*.md
-!data/processed/*.md
-!data/interim/*.md
 
 # Model files and checkpoints
 models/*.pth

@@ -1,123 +1,127 @@
-"""
-NCAA March Madness - Feature Engineering Stage
+"""Feature calculation pipeline stage.
 
-This module handles the feature engineering stage for the NCAA March Madness
-prediction pipeline. It builds and transforms features using the feature builders
-defined in the src/features module.
+This module provides a pipeline stage for calculating features
+and generating feature datasets.
 """
 
 import logging
 from pathlib import Path
 from typing import Any
 
-# Import feature generation functions
-from src.features import get_available_feature_builders
-from src.features.generate import generate_features
+from src.features import calculate_features, initialize_features
+from src.features.core.data_manager import FeatureDataManager
+from src.pipeline.data_stage import BaseDataStage
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, 
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
 
-def run(
-    config: dict[str, Any],
-    feature_sets: list[str] | None = None
-) -> dict[str, Any]:
+class FeatureCalculationStage(BaseDataStage):
+    """Pipeline stage for calculating features.
+    
+    This stage calculates features based on processed data and
+    saves the results to the features directory.
     """
-    Run the feature engineering stage.
     
-    Args:
-        config: Pipeline configuration dictionary
-        feature_sets: List of feature sets to generate (default: all enabled in config)
+    def __init__(
+        self,
+        data_dir: str = "data",
+        config: dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the feature calculation stage.
         
-    Returns:
-        Dictionary with feature generation results
-    """
-    logger.info("Starting feature engineering stage")
-    
-    # Get configuration
-    feature_config = config.get("features", {})
-    output_dir = feature_config.get("output_dir", "data/features")
-    
-    # Create output directory if it doesn't exist
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-    
-    # Determine which feature sets to generate
-    enabled_feature_sets = feature_config.get("enabled_feature_sets", ["foundation"])
-    if feature_sets is None:
-        feature_sets = enabled_feature_sets
-    else:
-        # Only generate feature sets that are both specified and enabled
-        feature_sets = [fs for fs in feature_sets if fs in enabled_feature_sets]
-    
-    if not feature_sets:
-        logger.warning("No feature sets selected for generation")
-        return {"success": False, "message": "No feature sets selected"}
-    
-    available_builders = get_available_feature_builders()
-    logger.info(f"Available feature builders: {', '.join(available_builders)}")
-    
-    # Generate each feature set
-    results = {}
-    for feature_set in feature_sets:
-        if feature_set not in available_builders:
-            logger.warning(f"Feature set '{feature_set}' not available. Skipping.")
-            results[feature_set] = {"success": False, "message": "Feature set not available"}
-            continue
+        Args:
+            data_dir: Base data directory.
+            config: Configuration for the stage.
+        """
+        super().__init__(data_dir, config)
+        self.processed_dir = Path(data_dir) / "processed"
+        self.features_dir = Path(data_dir) / "features"
         
-        logger.info(f"Generating features for '{feature_set}'")
-        try:
-            # Get feature-specific configuration
-            feature_specific_config = feature_config.get(feature_set, {})
+        # Create the features directory if it doesn't exist
+        self.features_dir.mkdir(parents=True, exist_ok=True)
+        (self.features_dir / "combined").mkdir(exist_ok=True)
+        
+        # Initialize feature system
+        self.features_loaded = False
+    
+    def run(
+        self,
+        categories: list[str] | None = None,
+        feature_ids: list[str] | None = None,
+        overwrite: bool = False,
+    ) -> bool:
+        """Run the feature calculation stage.
+        
+        Args:
+            categories: List of feature categories to calculate.
+                       If None, calculate features for all categories.
+            feature_ids: List of specific feature IDs to calculate.
+                        If None, calculate all features in the selected categories.
+            overwrite: Whether to overwrite existing feature files.
             
-            # Get the output filename (default to team_performance.parquet for backward compatibility)
-            output_filename = feature_specific_config.get("output_file", "team_performance.parquet")
-            
-            # Generate features
-            output_path = generate_features(
-                feature_set=feature_set,
-                output_dir=output_dir,
-                output_filename=output_filename,  # Pass the configured filename
-                config=feature_specific_config
+        Returns:
+            True if the stage ran successfully, False otherwise.
+        """
+        logger.info("Running feature calculation stage")
+        
+        # Make sure features are loaded
+        if not self.features_loaded:
+            count = initialize_features()
+            logger.info(f"Loaded {count} features")
+            self.features_loaded = True
+        
+        # Create data manager
+        data_manager = FeatureDataManager(
+            data_dir=str(self.data_dir),
+            raw_dir=str(self.data_dir / "raw"),
+            processed_dir=str(self.processed_dir),
+            features_dir=str(self.features_dir),
+        )
+        
+        # Calculate features
+        if categories:
+            # Calculate features for specific categories
+            results = {}
+            for category in categories:
+                logger.info(f"Calculating features for category: {category}")
+                category_results = calculate_features(
+                    category=category,
+                    feature_ids=feature_ids,
+                    data_manager=data_manager,
+                    save_results=True,
+                    overwrite=overwrite,
+                )
+                results.update(category_results)
+        
+        elif feature_ids:
+            # Calculate specific features
+            logger.info(f"Calculating features by ID: {feature_ids}")
+            results = calculate_features(
+                feature_ids=feature_ids,
+                data_manager=data_manager,
+                save_results=True,
+                overwrite=overwrite,
             )
-            
-            logger.info(f"Successfully generated features for '{feature_set}' at {output_path}")
-            results[feature_set] = {
-                "success": True,
-                "output_path": str(output_path)
-            }
-        except Exception as e:
-            logger.error(f"Error generating features for '{feature_set}': {e}")
-            results[feature_set] = {
-                "success": False,
-                "message": str(e)
-            }
-    
-    # Overall success is true if all feature sets were processed successfully
-    success = all(result.get("success", False) for result in results.values())
-    
-    return {
-        "success": success,
-        "feature_sets": results
-    }
-
-
-def run_feature_stage(config: dict[str, Any]) -> bool:
-    """
-    Run the feature engineering stage of the pipeline.
-    
-    Args:
-        config: Pipeline configuration dictionary
         
-    Returns:
-        Boolean indicating success
-    """
-    try:
-        results = run(config)
-        return results.get("success", False)
-    except Exception as e:
-        logger.exception(f"Error in feature stage: {e}")
-        return False 
+        else:
+            # Calculate all features
+            logger.info("Calculating all features")
+            results = calculate_features(
+                data_manager=data_manager,
+                save_results=True,
+                overwrite=overwrite,
+            )
+        
+        # Clean up feature files to remove duplicate columns
+        logger.info("Cleaning feature files to remove duplicate columns")
+        data_manager.clean_feature_files()
+        
+        # Combine all feature files
+        combined_path = data_manager.combine_feature_files()
+        
+        if not combined_path:
+            logger.warning("No features were calculated or combined")
+            return False
+        
+        logger.info(f"Feature calculation complete. Combined results at: {combined_path}")
+        return True 

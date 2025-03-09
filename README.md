@@ -73,10 +73,18 @@ march_madness/
 │   │   ├── cli.py          # Command-line interface
 │   │   ├── config.py       # Configuration management
 │   │   ├── data_management.py # Data cleaning/purging utilities
-│   │   └── data_stage.py   # Data stage implementation
+│   │   ├── data_stage.py   # Data stage implementation
+│   │   └── feature_stage.py # Feature calculation stage
 │   ├── features/           # Feature engineering
 │   │   ├── __init__.py
-│   │   └── builders.py     # Feature creation functions
+│   │   ├── core/           # Core feature system components
+│   │   │   ├── base.py     # BaseFeature abstract class
+│   │   │   ├── registry.py # Feature registry system
+│   │   │   ├── loader.py   # Feature loading utilities
+│   │   │   └── data_manager.py # Feature data management
+│   │   ├── team_performance/ # Team Performance features (T*)
+│   │   ├── shooting/       # Shooting features (S*)
+│   │   └── ... (other feature categories)
 │   ├── models/             # Model code
 │   │   ├── __init__.py
 │   │   ├── train.py        # Training functions
@@ -96,9 +104,17 @@ march_madness/
 │       ├── run_pipeline.yml # Pipeline execution workflow 
 │       ├── badges.yml      # Status badges workflow
 │       └── docs.yml        # Documentation workflow
-└── docs/                   # Additional documentation
-    ├── methodology.md      # Detailed methodology documentation
-    └── ai_assistant_guide.md # Guide for AI assistants working with this codebase
+└── docs/                   # Project documentation
+    ├── index.md            # Documentation index
+    ├── features/           # Feature system documentation
+    │   ├── index.md        # Feature system overview
+    │   ├── team_performance/ # Team performance features
+    │   └── shooting/       # Shooting features
+    ├── developer_guide/    # Developer guidance
+    │   └── ai_assistant_guide.md # Guide for AI assistants
+    ├── reference/          # Technical reference
+    │   └── features/       # Feature reference
+    └── pipeline/           # Pipeline documentation
 ```
 
 ## 🔧 Technology Stack
@@ -718,7 +734,11 @@ We use a multi-level testing approach:
    - README files in each directory explaining its purpose
    - Methodology document explaining the overall approach
    - Model cards for trained models describing their performance
-   - [AI Assistant Guide](docs/ai_assistant_guide.md) for AI tools working with this codebase
+   - [AI Assistant Guide](docs/ai_assistant_guide.md): Essential guide for AI coding assistants
+   - [Pipeline Documentation](docs/pipeline/README.md): Details on the pipeline architecture and usage
+   - [Data Processing](docs/data_processing.md): Information on data processing principles
+
+The documentation is organized by topic and includes both high-level overviews and detailed technical references.
 
 ## 🔗 Resources
 
@@ -726,3 +746,15 @@ We use a multi-level testing approach:
 - [hoopR R Package](https://hoopr.sportsdataverse.org/) - R package for accessing NCAA basketball data
 - [Kaggle March Madness Competitions](https://www.kaggle.com/c/mens-march-mania-2022) - Previous competitions on predicting March Madness
 - [NCAA Tournament History](https://www.ncaa.com/news/basketball-men/article/2023-02-22/march-madness-brackets-how-do-seeds-perform-ncaa-tournament) - Historical performance of tournament seeds
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [docs/](docs/) directory:
+
+- [Documentation Index](docs/index.md): Main documentation entry point with navigation to all sections
+- [Feature System](docs/features/index.md): The feature engineering system
+- [Data Documentation](docs/data/index.md): Information about data organization and processing
+- [Pipeline Documentation](docs/pipeline/index.md): The pipeline architecture and CLI
+- [Developer Guide](docs/developer_guide/README.md): Information for developers
+
+Visit the [Documentation Index](docs/index.md) for a complete overview of all available documentation.

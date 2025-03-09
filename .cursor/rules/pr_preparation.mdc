@@ -16,9 +16,9 @@ Before submitting a pull request, all code must pass a rigorous quality assuranc
 
 ### The Three Essential Steps:
 
-1. [Step 1: Comprehensive Testing](#step-1-comprehensive-testing)
-2. [Step 2: Code Linting](#step-2-code-linting)
-3. [Step 3: End-to-End Validation](#step-3-end-to-end-validation)
+1. [Step 1: Comprehensive Testing](mdc:#step-1-comprehensive-testing)
+2. [Step 2: Code Linting](mdc:#step-2-code-linting)
+3. [Step 3: End-to-End Validation](mdc:#step-3-end-to-end-validation)
 
 ## Detailed Process
 
@@ -28,10 +28,7 @@ Run **ALL** tests using pytest, not just those specific to the feature you're wo
 
 ```bash
 # Run all tests
-pytest
-
-# If you want a coverage report (optional)
-pytest --cov=src tests/
+python -m pytest
 ```
 
 If any tests fail:
@@ -61,7 +58,7 @@ ruff check .
 
 ```bash
 # Verify tests still pass after linting fixes
-pytest
+python -m pytest
 
 # Verify all linting issues are resolved
 ruff check .
@@ -101,13 +98,13 @@ After completing all three steps, run a final verification to ensure everything 
 
 ```bash
 # Final test verification
-pytest
+python -m pytest
 
 # Final lint verification
 ruff check .
 
 # Quick pipeline verification (no need to purge again)
-python run_pipeline.py --stages data features
+python run_pipeline.py
 ```
 
 **All three verifications must pass** before submitting your PR.
@@ -141,7 +138,7 @@ git pull origin main
 git merge main  # Fix any merge conflicts
 
 # 2. STEP 1: Run all tests
-pytest
+python -m pytest
 # Fix any issues until all tests pass
 
 # 3. STEP 2: Run linting
@@ -149,7 +146,7 @@ ruff check .
 # Fix all linting issues without adding exceptions
 
 # After fixing linting issues, verify tests still pass
-pytest
+python -m pytest
 ruff check .
 
 # 4. STEP 3: Run pipeline normally
@@ -161,9 +158,9 @@ python run_pipeline.py --clean-all
 # Fix any issues
 
 # 6. Final verification
-pytest
+python -m pytest
 ruff check .
-python run_pipeline.py --stages data features
+python run_pipeline.py
 
 # 7. If all steps pass, you're ready to create a PR!
 ```
