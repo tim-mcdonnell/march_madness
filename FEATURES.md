@@ -41,7 +41,7 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 | A03 | Kill Shots Allowed Per Game | Number of opponent 10-0 or better scoring runs per game | 4️⃣ | 🔴 | - | - |
 | A04 | Kill Shots Margin | Difference between team's kill shots and opponents' | 4️⃣ | 🔴 | - | - |
 | A05 | Clutch Performance | Performance in close games (last 5 minutes, margin ≤ 5 points) | 4️⃣ | 🔴 | - | - |
-| A06 | Home Court Advantage | Rating of how much better a team performs at home | 2️⃣ | 🟢 | [src/features/advanced_team/A06_home_court_advantage.py](src/features/advanced_team/A06_home_court_advantage.py) | - |
+| A06 | Home Court Advantage | Rating of how much better a team performs at home | 2️⃣ | 🟢📝 | [src/features/advanced_team/A06_home_court_advantage.py](src/features/advanced_team/A06_home_court_advantage.py) | [docs/features/advanced_team/A06_home_court_advantage.md](docs/features/advanced_team/A06_home_court_advantage.md) |
 | A07 | Tournament Experience | Previous NCAA tournament experience metric | 3️⃣ | 🔴 | - | - |
 
 ### Shooting and Scoring Metrics
