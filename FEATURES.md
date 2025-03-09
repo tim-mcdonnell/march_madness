@@ -24,7 +24,7 @@ This document tracks all features for our NCAA basketball prediction model. Feat
 |----|---------|-------------|-----------|--------|----------------|---------------|
 | T01 | Win Percentage | Overall, home, away, and neutral site | 1️⃣ | 🟢 🔧 | [src/features/team_performance/T01_win_percentage.py](src/features/team_performance/T01_win_percentage.py) | [docs/features/team_performance/T01_win_percentage.md](docs/features/team_performance/T01_win_percentage.md) |
 | T02 | Point Differential | Average margin of victory/defeat | 1️⃣ | 🟢 🔧 | [src/features/team_performance/T02_point_differential.py](src/features/team_performance/T02_point_differential.py) | [docs/features/team_performance/T02_point_differential.md](docs/features/team_performance/T02_point_differential.md) |
-| T03 | Team Offensive Efficiency Rating (O-Rate) | Points scored per 100 possessions, adjusted for opponent strength | 3️⃣ | 🟡 | [PR #23](https://github.com/username/repo/pull/23) | - |
+| T03 | Team Offensive Efficiency Rating (O-Rate) | Points scored per 100 possessions, adjusted for opponent strength | 3️⃣ | 🔴 | - | - |
 | T04 | Team Defensive Efficiency Rating (D-Rate) | Points allowed per 100 possessions, adjusted for opponent strength | 3️⃣ | 🔴 | - | - |
 | T05 | Relative Rating | Combined O-Rate and D-Rate (net efficiency) | 3️⃣ | 🔴 | - | - |
 | T06 | True Tempo | Average possessions per 40 minutes, adjusted for opponents | 2️⃣ | 🔴 | - | - |
