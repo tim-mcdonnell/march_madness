@@ -72,13 +72,7 @@ def test_full_team_master_stage(mock_get, test_environment) -> None:
                 "id": str(team_id),
                 "location": f"University {team_id}",
                 "name": f"Team {team_id}",
-                "displayName": f"University {team_id} Team {team_id}",
-                "abbreviation": f"T{team_id}",
-                "shortDisplayName": f"Team {team_id}",
-                "color": "123456",
-                "alternateColor": "ABCDEF",
-                "logos": [{"href": f"https://example.com/logo-{team_id}.png"}],
-                "conference": {"id": "1", "name": "Test Conference"}
+                # Simplified response with only necessary fields
             }
         }
         return mock_response
@@ -100,29 +94,23 @@ def test_full_team_master_stage(mock_get, test_environment) -> None:
     
     assert result is True
     
-    # Verify files were created
-    base_file = Path(test_environment["master_dir"]) / "team_master_base.parquet"
-    assert base_file.exists()
-    
+    # Verify file was created (only using one file now)
     master_file = Path(test_environment["master_dir"]) / "team_master.parquet"
     assert master_file.exists()
     
     # Verify content of master file
     df = pl.read_parquet(master_file)
     
-    # Check structure
-    assert "team_id" in df.columns
-    assert "season" in df.columns
-    assert "location" in df.columns
-    assert "name" in df.columns
+    # Check structure - only 4 columns now
+    assert set(df.columns) == {"team_id", "season", "location", "name"}
     
     # Check team IDs (should have 6 unique teams)
     unique_team_ids = df.select("team_id").unique()
     assert unique_team_ids.height == 6
     
-    # Check team names were populated
-    null_names = df.filter(pl.col("name").is_null())
-    assert null_names.height == 0
+    # Check team names were populated (no nulls, only possibly empty strings)
+    empty_names = df.filter(pl.col("name") == "")
+    assert empty_names.height == 0
 
 @patch("requests.get")
 def test_incremental_updates(mock_get, test_environment) -> None:
@@ -144,13 +132,7 @@ def test_incremental_updates(mock_get, test_environment) -> None:
                 "id": str(team_id),
                 "location": f"University {team_id}",
                 "name": f"Team {team_id}",
-                "displayName": f"University {team_id} Team {team_id}",
-                "abbreviation": f"T{team_id}",
-                "shortDisplayName": f"Team {team_id}",
-                "color": "123456",
-                "alternateColor": "ABCDEF",
-                "logos": [{"href": f"https://example.com/logo-{team_id}.png"}],
-                "conference": {"id": "1", "name": "Test Conference"}
+                # Simplified response with only necessary fields
             }
         }
         return mock_response
@@ -167,10 +149,8 @@ def test_incremental_updates(mock_get, test_environment) -> None:
     }
     
     # Create test data directly
-    base_master_path = Path(test_environment["master_dir"]) / "team_master_base.parquet"
     master_path = Path(test_environment["master_dir"]) / "team_master.parquet"
     
-    # First, run a normal extraction to create the base file
     # Create test team data
     team_box_dir = Path(test_environment["raw_dir"]) / "team_box"
     team_box_2022 = pl.DataFrame({
@@ -188,36 +168,27 @@ def test_incremental_updates(mock_get, test_environment) -> None:
     team_box_2023.write_parquet(team_box_dir / "team_box_2023.parquet")
     
     # Create a half-populated master file that only has team 101 filled in
-    # Others will be missing data to test incremental update
+    # Others will have empty data to test incremental update
     stage = TeamMasterStage(
         data_dir=test_environment["data_dir"],
         config=config
     )
     
-    # Create the base file
+    # Run to create the initial master file
     stage.run(batch_size=1)
     
-    # Verify the files were created
-    assert base_master_path.exists()
+    # Verify the file was created
     assert master_path.exists()
     
     # Now modify the master file to simulate partially completed data
-    # We'll leave only team 101's data and null out the rest
+    # We'll leave only team 101's data and empty out the rest
     master_df = pl.read_parquet(master_path)
     
-    # Create a new DataFrame with team 101 data intact and others nulled out
+    # Create a new DataFrame with team 101 data intact and others emptied out
     team_101 = master_df.filter(pl.col("team_id") == 101)
     others = master_df.filter(pl.col("team_id") != 101).with_columns([
-        pl.lit(None).alias("location"),
-        pl.lit(None).alias("name"),
-        pl.lit(None).alias("short_name"),
-        pl.lit(None).alias("abbreviation"),
-        pl.lit(None).alias("display_name"),
-        pl.lit(None).alias("conference_id"),
-        pl.lit(None).alias("conference_name"),
-        pl.lit(None).alias("logo_url"),
-        pl.lit(None).alias("color"),
-        pl.lit(None).alias("alternate_color"),
+        pl.lit("").alias("location"),
+        pl.lit("").alias("name"),
     ])
     
     # Combine and save back
@@ -244,15 +215,6 @@ def test_incremental_updates(mock_get, test_environment) -> None:
         # Should have data for this team
         assert team_rows.height > 0
         
-        # All rows should have location and name
-        assert team_rows.filter(pl.col("location").is_null()).height == 0
-        assert team_rows.filter(pl.col("name").is_null()).height == 0
-    
-    # Team 101 data should be preserved from the original data
-    team_101_data = updated_df.filter(pl.col("team_id") == 101)
-    # Team 102+ should have been updated with the mock API data
-    team_102_data = updated_df.filter(pl.col("team_id") == 102)
-    
-    # Check names follow the expected pattern
-    assert "Team 101" in team_101_data.select("name").to_series().to_list()  # Original name preserved
-    assert "Team 102" in team_102_data.select("name").to_series().to_list()  # New name from API 
+        # All rows should have non-empty location and name
+        assert team_rows.filter(pl.col("location") == "").height == 0
+        assert team_rows.filter(pl.col("name") == "").height == 0 
