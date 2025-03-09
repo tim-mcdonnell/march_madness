@@ -197,11 +197,7 @@ class FeatureDataManager:
         return str(file_path)
     
     def clean_feature_files(self) -> None:
-        """Clean all feature files to remove duplicate column suffixes.
-        
-        This method removes duplicate '_right' suffixes from all category feature files.
-        These can be created during joins when column names conflict.
-        """
+        """Clean feature files to remove duplicate columns with _right suffix."""
         # Find all category feature files
         feature_files = list(self.features_dir.glob("*_metrics.parquet"))
         if not feature_files:
@@ -262,6 +258,127 @@ class FeatureDataManager:
         
         logger.info(f"Finished cleaning {len(feature_files)} feature files")
     
+    def _derive_s01_from_team_box(self, missing_team_seasons: pl.DataFrame) -> pl.DataFrame:
+        """
+        Derive S01 (Effective Field Goal Percentage) directly from team_box data.
+        
+        This is a fallback method when teams exist in team_box but their S01 values
+        weren't calculated properly in the feature stage.
+        
+        Args:
+            missing_team_seasons: DataFrame with team_id and season for teams missing S01
+            
+        Returns:
+            DataFrame with team_id, season, and derived S01 values
+        """
+        try:
+            # Load team_box data
+            team_box = pl.read_parquet(self.processed_dir / "team_box.parquet")
+            
+            # Filter to relevant team-seasons
+            team_box_filtered = team_box.join(
+                missing_team_seasons,
+                on=["team_id", "season"],
+                how="inner"
+            )
+            
+            if len(team_box_filtered) == 0:
+                logger.warning("No matching team_box data found for missing S01 values")
+                return pl.DataFrame()
+            
+            # Verify required columns are present
+            required_cols = [
+                "team_id", "field_goals_made", "three_point_field_goals_made", 
+                "field_goals_attempted", "season"
+            ]
+            
+            missing_cols = [col for col in required_cols if col not in team_box_filtered.columns]
+            if missing_cols:
+                logger.warning(f"Missing required columns for S01 calculation: {missing_cols}")
+                return pl.DataFrame()
+            
+            # Calculate eFG% by team and season using same formula as the feature
+            result = (
+                team_box_filtered
+                .group_by(["team_id", "season"])
+                .agg([
+                    pl.col("field_goals_made").sum().alias("total_field_goals_made"),
+                    pl.col("three_point_field_goals_made").sum().alias("total_three_point_field_goals_made"),
+                    pl.col("field_goals_attempted").sum().alias("total_field_goals_attempted"),
+                ])
+            )
+            
+            # Add the eFG% column using the formula
+            result = result.with_columns([
+                (
+                    (pl.col("total_field_goals_made") + 0.5 * pl.col("total_three_point_field_goals_made")) / 
+                    pl.when(pl.col("total_field_goals_attempted") > 0)
+                    .then(pl.col("total_field_goals_attempted"))
+                    .otherwise(1.0)  # Avoid division by zero
+                ).alias("derived_effective_field_goal_percentage")  # Use a different name to avoid conflicts
+            ])
+            
+            # Drop the intermediate columns
+            result = result.drop([
+                "total_field_goals_made", 
+                "total_three_point_field_goals_made", 
+                "total_field_goals_attempted"
+            ])
+            
+            logger.info(f"Derived S01 values for {len(result)} team-seasons directly from team_box")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error deriving S01 values from team_box: {e}")
+            return pl.DataFrame()
+            
+    def apply_derived_s01_values(self, base_df: pl.DataFrame, derived_s01: pl.DataFrame) -> pl.DataFrame:
+        """
+        Apply derived S01 values to the base DataFrame, handling column name conflicts.
+        
+        Args:
+            base_df: Base DataFrame to update
+            derived_s01: DataFrame with derived S01 values
+            
+        Returns:
+            Updated DataFrame with derived S01 values applied
+        """
+        s01_col = "shooting_S01_effective_field_goal_percentage"
+        
+        try:
+            # Create a DataFrame with null S01 values replaced by derived values
+            if derived_s01.height > 0:
+                # First, extract the rows with null S01 values
+                null_s01_rows = base_df.filter(pl.col(s01_col).is_null())
+                
+                # Join with derived values
+                updated_rows = null_s01_rows.join(
+                    derived_s01.select(
+                        "team_id", 
+                        "season", 
+                        pl.col("derived_effective_field_goal_percentage")
+                    ),
+                    on=["team_id", "season"],
+                    how="left"
+                )
+                
+                # Create new column with values from derived values
+                updated_rows = updated_rows.with_columns([
+                    pl.col("derived_effective_field_goal_percentage").alias(s01_col)
+                ]).drop("derived_effective_field_goal_percentage")
+                
+                # Find rows that have non-null values
+                non_null_s01_rows = base_df.filter(pl.col(s01_col).is_not_null())
+                
+                # Combine original non-null rows with updated rows
+                return pl.concat([non_null_s01_rows, updated_rows]).sort(["team_id", "season"])
+                
+            return base_df
+            
+        except Exception as e:
+            logger.error(f"Error applying derived S01 values: {e}")
+            return base_df
+
     def combine_feature_files(self) -> str | None:
         """
         Combine all feature files into a single feature set.
@@ -284,36 +401,91 @@ class FeatureDataManager:
             logger.warning("No feature files found to combine.")
             return None
         
-        # Load the first feature file as our base
-        if not feature_paths:
-            logger.warning("No feature files found to combine.")
-            return None
+        # Dictionary to store each feature DataFrame by category
+        feature_dfs = {}
         
-        # Start with an empty DataFrame with just the join columns
-        base_df = None
-        feature_dfs = []
-
         # First, collect all the feature DataFrames
         for path in feature_paths:
             category = path.stem.replace("_metrics", "")
             try:
                 df = pl.read_parquet(path)
-                logger.info(f"Loaded feature file: {path}")
-                
-                # Store the category and dataframe
-                feature_dfs.append((category, df))
+                logger.info(f"Loaded feature file: {path} with {len(df)} rows")
+                feature_dfs[category] = df
             except Exception as e:
                 logger.error(f"Error loading feature file {path}: {e}")
         
         if not feature_dfs:
             logger.warning("No feature files could be loaded.")
             return None
-
-        # Initialize the base DataFrame with just the join columns from the first feature file
-        base_df = feature_dfs[0][1].select(std_join_cols)
+        
+        # To solve the team-seasons discrepancy, we need to load the original data sources
+        # to help with joining and filling in missing values
+        
+        # Load team_box and schedules data to help with team-season matching
+        try:
+            team_box = pl.read_parquet(self.processed_dir / "team_box.parquet")
+            schedules = pl.read_parquet(self.processed_dir / "schedules.parquet")
+            
+            # Extract team_id and season combinations from both sources
+            team_seasons_teambox = team_box.select(['team_id', 'season']).unique()
+            
+            # Create a comprehensive team mapping from schedules with both home and away teams
+            team_mapping = pl.concat([
+                # Home teams
+                schedules.select([
+                    pl.col('home_id').alias('team_id'), 
+                    pl.col('home_location').alias('team_location'), 
+                    pl.col('home_name').alias('team_name'),
+                    pl.col('season')
+                ]),
+                # Away teams
+                schedules.select([
+                    pl.col('away_id').alias('team_id'), 
+                    pl.col('away_location').alias('team_location'), 
+                    pl.col('away_name').alias('team_name'),
+                    pl.col('season')
+                ])
+            ]).unique()
+            
+            logger.info(f"Created comprehensive team mapping with {len(team_mapping)} team-seasons")
+            
+        except Exception as e:
+            logger.warning(f"Could not load additional data for enhanced joins: {e}")
+            team_mapping = None
+            team_seasons_teambox = None
+        
+        # Create a base DataFrame with all unique combinations of join columns
+        union_dfs = []
+        
+        # Start with the team mapping if available
+        if team_mapping is not None:
+            union_dfs.append(team_mapping)
+        
+        # Add team-seasons from each feature file
+        for category, df in feature_dfs.items():
+            # Get valid join columns that exist in this DataFrame
+            valid_join_cols = [col for col in std_join_cols if col in df.columns]
+            if len(valid_join_cols) >= 2 and "team_id" in valid_join_cols and "season" in valid_join_cols:
+                union_dfs.append(df.select(valid_join_cols))
+            else:
+                logger.warning(f"Skipping {category}: missing required join columns")
+        
+        if not union_dfs:
+            logger.error("No valid DataFrames with required join columns found")
+            return None
+        
+        # Union all DataFrames to get all unique combinations of join columns
+        base_df = union_dfs[0]
+        for df in union_dfs[1:]:
+            base_df = pl.concat([base_df, df]).unique()
+        
+        logger.info(f"Created base DataFrame with {len(base_df)} unique rows")
         
         # Now add features from each category with proper prefixing
-        for category, df in feature_dfs:
+        for category, df in feature_dfs.items():
+            # Get valid join columns that exist in both DataFrames
+            valid_join_cols = [col for col in std_join_cols if col in df.columns and col in base_df.columns]
+            
             # Get feature columns (non-join columns)
             feature_cols = [col for col in df.columns if col not in std_join_cols]
             
@@ -321,58 +493,143 @@ class FeatureDataManager:
                 logger.warning(f"No feature columns found in {category} category.")
                 continue
             
+            if not valid_join_cols:
+                logger.warning(f"No valid join columns for {category}, skipping.")
+                continue
+            
             # Prefix feature columns with category name if not already prefixed
-            prefixed_features = {}
-            for col in feature_cols:
-                if not col.startswith(f"{category}_"):
-                    prefixed_features[col] = f"{category}_{col}"
+            feature_df = df.select(
+                valid_join_cols + 
+                [
+                    pl.col(col).alias(f"{category}_{col}" if not col.startswith(f"{category}_") else col)
+                    for col in feature_cols
+                ]
+            )
             
-            # If there are columns to rename, create a new dataframe with renamed columns
-            if prefixed_features:
-                feature_df = df.select(
-                    std_join_cols + [
-                        pl.col(col).alias(prefixed_features.get(col, col)) 
-                        for col in feature_cols
-                    ]
+            # Join with the base DataFrame
+            try:
+                # Use a left join to keep all rows in base_df
+                base_df = base_df.join(
+                    feature_df,
+                    on=valid_join_cols,
+                    how="left"
                 )
-            else:
-                feature_df = df.select(std_join_cols + feature_cols)
-            
-            # For the first category, we already have the join columns, so just add the features
-            if base_df.width == len(std_join_cols):  # Only join columns
-                # Add feature columns directly
-                for col in feature_df.columns:
-                    if col not in std_join_cols:  # Skip join columns
-                        base_df = base_df.with_columns(feature_df.select(col))
-            else:
-                # For subsequent categories, join on std_join_cols
-                try:
-                    # Join only feature columns to avoid duplication
-                    feature_only_df = feature_df.select([col for col in feature_df.columns if col not in std_join_cols])
-                    join_df = feature_df.select(std_join_cols)
+                logger.info(f"Joined {len(feature_cols)} columns from {category}")
+            except Exception as e:
+                logger.error(f"Error joining {category} features: {e}")
+        
+        # For features that depend directly on team_box (like S01), add special handling
+        # to check if we can derive values for missing data
+        s01_col = "shooting_S01_effective_field_goal_percentage"
+        if "shooting" in feature_dfs and team_seasons_teambox is not None:
+            try:
+                # Identify team-seasons missing S01 values but present in team_box
+                if s01_col in base_df.columns:
+                    missing_s01 = (
+                        base_df
+                        .filter(pl.col(s01_col).is_null())
+                        .select(["team_id", "season"])
+                    )
                     
-                    # First join the join columns
-                    base_df = base_df.join(join_df, on=std_join_cols, how="left", suffix="_right")
+                    # Find those that should have data from team_box
+                    fixable_seasons = missing_s01.join(
+                        team_seasons_teambox, 
+                        on=["team_id", "season"],
+                        how="inner"
+                    )
                     
-                    # Then add each feature column separately
-                    for col in feature_only_df.columns:
-                        temp_df = join_df.with_columns(feature_only_df.select(col))
-                        base_df = base_df.join(
-                            temp_df.select(std_join_cols + [col]), 
-                            on=std_join_cols, 
-                            how="left",
-                            suffix="_right"
+                    if len(fixable_seasons) > 0:
+                        logger.info(f"Found {len(fixable_seasons)} team-seasons that should have S01 values")
+                        
+                        # First try to join with the shooting metrics data
+                        shooting = feature_dfs["shooting"]
+                        
+                        # Join to get the missing values
+                        enhanced_s01 = fixable_seasons.join(
+                            shooting,
+                            on=["team_id", "season"],
+                            how="left"
                         )
-                except Exception as e:
-                    logger.error(f"Error joining {category} features: {e}")
+                        
+                        if len(enhanced_s01) > 0 and "S01_effective_field_goal_percentage" in enhanced_s01.columns:
+                            # Update the base DataFrame with these values
+                            for row in enhanced_s01.iter_rows(named=True):
+                                if row["S01_effective_field_goal_percentage"] is not None:
+                                    # Update the base DataFrame for this team-season
+                                    base_df = base_df.with_columns([
+                                        pl.when(
+                                            (pl.col("team_id") == row["team_id"]) & 
+                                            (pl.col("season") == row["season"]) &
+                                            pl.col(s01_col).is_null()
+                                        )
+                                        .then(pl.lit(row["S01_effective_field_goal_percentage"]))
+                                        .otherwise(pl.col(s01_col))
+                                        .alias(s01_col)
+                                    ])
+                            logger.info("Enhanced S01 data from shooting metrics for team-seasons")
                 
+                        # For any remaining missing values, try to derive directly from team_box
+                        still_missing_s01 = (
+                            base_df
+                            .filter(pl.col(s01_col).is_null())
+                            .select(["team_id", "season"])
+                            .join(team_seasons_teambox, on=["team_id", "season"], how="inner")
+                        )
+                        
+                        if len(still_missing_s01) > 0:
+                            logger.info(f"Still missing {len(still_missing_s01)} S01 values that should be calculable")
+                            
+                            # Derive S01 values directly from team_box
+                            derived_s01 = self._derive_s01_from_team_box(still_missing_s01)
+                            
+                            if len(derived_s01) > 0:
+                                # Apply the derived values to the base DataFrame
+                                base_df = self.apply_derived_s01_values(base_df, derived_s01)
+                                logger.info(f"Added {len(derived_s01)} derived S01 values")
+                
+                null_count = base_df[s01_col].null_count() if s01_col in base_df.columns else "unknown"
+                logger.info(f"After enhancement: S01 null count: {null_count} out of {len(base_df)}")
+                
+            except Exception as e:
+                logger.error(f"Error enhancing S01 values: {e}")
+        
         # Save the combined results
         output_path = self.features_dir / "combined" / "full_feature_set.parquet"
         output_path.parent.mkdir(exist_ok=True, parents=True)
         
         if base_df is not None and base_df.height > 0:
+            # Backup the existing file if it exists
+            if output_path.exists():
+                backup_path = output_path.with_name(f"{output_path.stem}_backup.parquet")
+                try:
+                    import shutil
+                    shutil.copy2(output_path, backup_path)
+                    logger.info(f"Backed up existing file to {backup_path}")
+                except Exception as e:
+                    logger.warning(f"Failed to backup existing file: {e}")
+            
             base_df.write_parquet(output_path)
             logger.info(f"Combined {len(feature_paths)} feature files into: {output_path}")
-            return output_path
+            
+            # Verify the combine worked correctly
+            try:
+                result_df = pl.read_parquet(output_path)
+                for category in feature_dfs:
+                    category_cols = [col for col in result_df.columns if col.startswith(f"{category}_")]
+                    if category_cols:
+                        # Calculate fill rates for the first 3 columns
+                        filled_pct = {
+                            col: (1 - result_df[col].null_count() / len(result_df)) * 100 
+                            for col in category_cols[:3]
+                        }
+                        logger.info(
+                            f"Verification - {category} columns: {len(category_cols)}, "
+                            f"fill rates: {filled_pct}"
+                        )
+            except Exception as e:
+                logger.error(f"Error verifying combined file: {e}")
+            
+            return str(output_path)
+        
         logger.warning("Failed to create combined feature file - no data available.")
         return None 

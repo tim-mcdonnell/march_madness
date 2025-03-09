@@ -39,7 +39,8 @@ class EffectiveFieldGoalPercentage(BaseFeature):
         Returns:
             List of data source names required by this feature.
         """
-        return ["team_box"]
+        # We also request schedules to help with team identification
+        return ["team_box", "schedules"]
     
     def calculate(self, data: pl.DataFrame | dict[str, pl.DataFrame]) -> pl.DataFrame:
         """Calculate Effective Field Goal Percentage.
@@ -57,10 +58,13 @@ class EffectiveFieldGoalPercentage(BaseFeature):
             if "team_box" not in data:
                 raise ValueError("team_box data is required for eFG% calculation")
             team_box = data["team_box"]
+            # Schedules data can help with team name mapping but is optional
+            schedules = data.get("schedules")
         else:
             team_box = data
+            schedules = None
         
-        # Verify required columns are present
+        # Verify required columns are present in team_box
         required_cols = [
             "team_id", "field_goals_made", "three_point_field_goals_made", 
             "field_goals_attempted", "season"
@@ -68,7 +72,7 @@ class EffectiveFieldGoalPercentage(BaseFeature):
         
         missing_cols = [col for col in required_cols if col not in team_box.columns]
         if missing_cols:
-            raise ValueError(f"Missing required columns: {missing_cols}")
+            raise ValueError(f"Missing required columns in team_box: {missing_cols}")
         
         # Ensure we have team name column(s)
         has_location = "team_location" in team_box.columns
@@ -120,6 +124,71 @@ class EffectiveFieldGoalPercentage(BaseFeature):
             result = result.rename({"team_location": "team_name"})
             has_name = True
         
+        # If schedules data is available, use it to enhance team name information
+        if schedules is not None and (not has_location or not has_name):
+            try:
+                logger.info("Using schedules data to enhance team information")
+                
+                # Create a team mapping from schedules
+                team_mapping = pl.concat([
+                    # Home teams
+                    schedules.select([
+                        pl.col('home_id').alias('team_id'), 
+                        pl.col('home_location').alias('team_location'), 
+                        pl.col('home_name').alias('team_name'),
+                        pl.col('season')
+                    ]),
+                    # Away teams
+                    schedules.select([
+                        pl.col('away_id').alias('team_id'), 
+                        pl.col('away_location').alias('team_location'), 
+                        pl.col('away_name').alias('team_name'),
+                        pl.col('season')
+                    ])
+                ]).unique()
+                
+                # Join with result to add missing team information
+                join_cols = ["team_id", "season"]
+                
+                # Left join to keep all records from result
+                enhanced_result = result.join(
+                    team_mapping.select(join_cols + ["team_location", "team_name"]),
+                    on=join_cols,
+                    how="left",
+                    suffix="_schedule"
+                )
+                
+                # Fill in missing team_location from schedules if needed
+                if not has_location:
+                    enhanced_result = enhanced_result.with_columns([
+                        pl.when(pl.col("team_location").is_null())
+                        .then(pl.col("team_location_schedule"))
+                        .otherwise(pl.col("team_location"))
+                        .alias("team_location")
+                    ])
+                
+                # Fill in missing team_name from schedules if needed
+                if not has_name:
+                    enhanced_result = enhanced_result.with_columns([
+                        pl.when(pl.col("team_name").is_null())
+                        .then(pl.col("team_name_schedule"))
+                        .otherwise(pl.col("team_name"))
+                        .alias("team_name")
+                    ])
+                
+                # Drop the _schedule columns
+                enhanced_result = enhanced_result.drop([
+                    col for col in enhanced_result.columns 
+                    if col.endswith("_schedule")
+                ])
+                
+                result = enhanced_result
+                has_location = "team_location" in result.columns
+                has_name = "team_name" in result.columns
+                
+            except Exception as e:
+                logger.warning(f"Could not enhance team information from schedules: {e}")
+        
         # Ensure we have both team_location and team_name
         if not has_location:
             # Add a placeholder team_location column
@@ -133,4 +202,5 @@ class EffectiveFieldGoalPercentage(BaseFeature):
                 pl.lit("Unknown").alias("team_name")
             ])
         
+        logger.info(f"Calculated eFG% for {len(result)} team-seasons")
         return result 
