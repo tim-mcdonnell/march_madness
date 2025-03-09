@@ -279,15 +279,32 @@ python run_pipeline.py --stages features --feature-ids S01 T01
 python run_pipeline.py --stages features --overwrite-features
 
 # Clean data before running
-python run_pipeline.py --clean-raw  # Clean raw data
-python run_pipeline.py --clean-all  # Clean all data
+python run_pipeline.py --clean-raw       # Clean raw data files only
+python run_pipeline.py --clean-processed # Clean processed data files only
+python run_pipeline.py --clean-features  # Clean individual feature files (but not combined files)
+python run_pipeline.py --clean-models    # Clean model files only
+python run_pipeline.py --clean-all       # Clean all data (but note: combined feature files are not deleted)
+
+# Manually remove combined feature files
+rm -rf data/features/combined/
 
 # Custom configuration
 python run_pipeline.py --config custom_config.yaml
 
+# Create default config without running
+python run_pipeline.py --create-config --no-run
+
+# Set logging level
+python run_pipeline.py --log-level DEBUG  # Available levels: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 # Run EDA script
 python -m src.eda.script_name
 ```
+
+Important Notes About Data Cleaning:
+- `--clean-features` removes individual feature category files (e.g., `shooting_metrics.parquet`) but **does not** remove the combined feature set in `data/features/combined/`.
+- `--clean-all` cleans all data types but also **does not** remove the combined feature set.
+- To completely clean all feature data including the combined feature set, use both `--clean-features` and manually remove the combined directory.
 
 ### 5.2 Data Processing Workflow
 

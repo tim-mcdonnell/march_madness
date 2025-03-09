@@ -224,6 +224,14 @@ def purge_feature_data(config: dict[str, Any]) -> None:
     for file_path in feature_dir.glob("*.parquet"):
         logger.info(f"Deleting file: {file_path}")
         file_path.unlink()
+    
+    # Delete files in the combined directory as well
+    combined_dir = feature_dir / "combined"
+    if combined_dir.exists():
+        for file_path in combined_dir.glob("*.parquet"):
+            logger.info(f"Deleting combined file: {file_path}")
+            file_path.unlink()
+        logger.info(f"Purged combined feature files in {combined_dir}")
 
 
 def purge_model_data(config: dict[str, Any]) -> None:
