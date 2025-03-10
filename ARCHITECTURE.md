@@ -1,8 +1,8 @@
-# NCAA March Madness Predictor
+# NCAA March Madness Predictor: DuckDB Architecture
 
 ## 1. Overview
 
-This document outlines the architecture and implementation of the NCAA March Madness Predictor using DuckDB as the central data engine. This approach simplifies the data stack while maintaining high performance for feature calculation and model training.
+This document outlines the architecture and implementation strategy for rebuilding the NCAA March Madness Predictor using DuckDB as the central data engine. This approach simplifies the data stack while maintaining high performance for feature calculation and model training.
 
 ### 1.1 Goals
 
@@ -69,16 +69,15 @@ This document outlines the architecture and implementation of the NCAA March Mad
 ### 3.2 Key Libraries & Versions
 
 ```
-duckdb
-requests
-pydantic
-torch
-pandas
-numpy
-matplotlib
-seaborn
-plotly
-pytest
+duckdb>=0.9.0
+requests>=2.28.0
+pydantic>=2.0.0
+torch>=2.0.0
+pandas>=2.0.0
+numpy>=1.23.0
+matplotlib>=3.6.0
+plotly>=5.10.0
+pytest>=7.0.0
 ```
 
 ## 4. Project Structure
@@ -128,6 +127,7 @@ march_madness/
 ├── .gitignore                   # Git ignore file
 ├── requirements.txt             # Dependencies
 ├── FEATURES.md                  # Feature registry
+├── ARCHITECTURE.md              # This document
 └── run.py                       # Main CLI entry point
 ```
 
@@ -404,5 +404,4 @@ FEATURES = {
 
 - [DuckDB Documentation](https://duckdb.org/docs/)
 - [PyTorch Documentation](https://pytorch.org/docs/stable/index.html)
-- [ESPN API Documentation](https://www.espn.com/apis/devcenter/docs/)
 - [Project GitHub Repository](https://github.com/tim-mcdonnell/march_madness) 

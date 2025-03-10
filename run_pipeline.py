@@ -13,6 +13,9 @@ Example usage:
     # Run only the data collection stage
     python run_pipeline.py --stages data
     
+    # Run the master data stage
+    python run_pipeline.py --stages master_data
+    
     # Run data and feature engineering with specific years
     python run_pipeline.py --stages data features --years 2023 2024
     
