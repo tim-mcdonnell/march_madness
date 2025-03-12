@@ -1,3 +1,8 @@
+# *This is now depreciated.  Go check out https://github.com/tim-mcdonnell/ncaa-prediction-model for my current work.  I know.  I'm disorganized. My Bad.*
+
+
+
+
 # NCAA March Madness Predictor
 
 A data science approach to building optimal March Madness brackets using historical NCAA men's basketball data.
